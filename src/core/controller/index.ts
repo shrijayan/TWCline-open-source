@@ -722,6 +722,14 @@ export class Controller {
 				}
 				break
 			}
+			case "fileEditAccepted": {
+				await this.incrementAcceptedFileEdits()
+				break
+			}
+			case "fetchFileEditStatistics": {
+				await this.fetchFileEditStatistics()
+				break
+			}
 			// Add more switch case statements here as more webview message commands
 			// are created within the webview context (i.e. inside media/main.js)
 		}
@@ -1960,5 +1968,96 @@ Commit message:`
 			type: "action",
 			action: "chatButtonClicked",
 		})
+	}
+
+	// File Edit Statistics
+
+	/**
+	 * Record that a file edit suggestion has been presented to the user
+	 */
+	async recordFileEditPresented() {
+		console.log("Recording file edit presented")
+		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
+			totalSuggestions: number
+			acceptedSuggestions: number
+		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
+
+		stats.totalSuggestions += 1
+
+		await updateGlobalState(this.context, "fileEditStatistics", stats)
+		console.log("Updated file edit statistics after presentation:", stats)
+
+		// Send updated statistics to the webview
+		await this.postMessageToWebview({
+			type: "fileEditStatistics",
+			fileEditStatistics: stats,
+		})
+	}
+
+	/**
+	 * Record that a file edit suggestion has been accepted by the user
+	 */
+	async incrementAcceptedFileEdits() {
+		console.log("Recording file edit accepted")
+		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
+			totalSuggestions: number
+			acceptedSuggestions: number
+		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
+
+		// Only increment the accepted counter since the total was already incremented when presented
+		stats.acceptedSuggestions += 1
+
+		await updateGlobalState(this.context, "fileEditStatistics", stats)
+		console.log("Updated file edit statistics after acceptance:", stats)
+
+		// Send updated statistics to the webview
+		await this.postMessageToWebview({
+			type: "fileEditStatistics",
+			fileEditStatistics: stats,
+		})
+	}
+
+	/**
+	 * Record that a file edit suggestion has been rejected by the user
+	 */
+	async recordFileEditRejected() {
+		console.log("Recording file edit rejected")
+		// We don't need to increment any counters here, since the total was already
+		// incremented when the edit was presented, and we don't increment acceptedSuggestions
+
+		// Just fetch and send the current stats to update the UI
+		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
+			totalSuggestions: number
+			acceptedSuggestions: number
+		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
+
+		console.log("Current file edit statistics after rejection:", stats)
+
+		// Send updated statistics to the webview
+		await this.postMessageToWebview({
+			type: "fileEditStatistics",
+			fileEditStatistics: stats,
+		})
+	}
+
+	/**
+	 * Send the current file edit statistics to the webview
+	 */
+	async fetchFileEditStatistics() {
+		console.log("Fetching file edit statistics...")
+		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
+			totalSuggestions: number
+			acceptedSuggestions: number
+		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
+
+		console.log("Retrieved file edit statistics:", stats)
+
+		await this.postMessageToWebview({
+			type: "fileEditStatistics",
+			fileEditStatistics: stats,
+		})
+
+		console.log("Sent file edit statistics to webview")
+		return stats
 	}
 }

@@ -1,5 +1,6 @@
 import { VSCodeButton, VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { memo, useEffect, useState } from "react"
+import { StatisticsView } from "./StatisticsView"
 import { useFirebaseAuth } from "@/context/FirebaseAuthContext"
 import { vscode } from "@/utils/vscode"
 import VSCodeButtonLink from "../common/VSCodeButtonLink"
@@ -16,6 +17,12 @@ type AccountViewProps = {
 }
 
 const AccountView = ({ onDone }: AccountViewProps) => {
+	const [showStatistics, setShowStatistics] = useState(false);
+
+	if (showStatistics) {
+		return <StatisticsView onBack={() => setShowStatistics(false)} />;
+	}
+
 	return (
 		<div className="fixed inset-0 flex flex-col overflow-hidden pt-[10px] pl-[20px]">
 			<div className="flex justify-between items-center mb-[17px] pr-[17px]">
@@ -24,14 +31,14 @@ const AccountView = ({ onDone }: AccountViewProps) => {
 			</div>
 			<div className="flex-grow overflow-hidden pr-[8px] flex flex-col">
 				<div className="h-full mb-[5px]">
-					<ClineAccountView />
+					<ClineAccountView onShowStatistics={() => setShowStatistics(true)} />
 				</div>
 			</div>
 		</div>
 	)
 }
 
-export const ClineAccountView = () => {
+export const ClineAccountView = ({ onShowStatistics }: { onShowStatistics: () => void }) => {
 	const { user: firebaseUser, handleSignOut } = useFirebaseAuth()
 	const { userInfo, apiConfiguration } = useExtensionState()
 
@@ -142,10 +149,15 @@ export const ClineAccountView = () => {
 							)}
 						</div>
 
-						<div className="w-full">
+						<div className="w-full flex flex-col gap-2">
 							<VSCodeButtonLink href="https://app.cline.bot/credits/#buy" className="w-full">
 								Add Credits
 							</VSCodeButtonLink>
+							
+							<VSCodeButton appearance="secondary" onClick={onShowStatistics} className="w-full">
+								<span className="codicon codicon-graph-line mr-2"></span>
+								Statistics
+							</VSCodeButton>
 						</div>
 					</div>
 

@@ -46,8 +46,9 @@ export interface ExtensionMessage {
 		| "browserRelaunchResult"
 		| "fileSearchResults"
 		| "grpc_response" // New type for gRPC responses
-		| "setActiveQuote"
-		| "sendWithCustomPrompt" // New type for sending with custom prompt
+	| "setActiveQuote"
+	| "sendWithCustomPrompt" // New type for sending with custom prompt
+	| "fileEditStatistics"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -109,6 +110,10 @@ export interface ExtensionMessage {
 		is_streaming?: boolean // Whether this is part of a streaming response
 		sequence_number?: number // For ordering chunks in streaming responses
 	}
+	fileEditStatistics?: {
+		totalSuggestions: number
+		acceptedSuggestions: number
+	}
 }
 
 export type Invoke = "sendMessage" | "primaryButtonClick" | "secondaryButtonClick"
@@ -121,6 +126,10 @@ export interface ExtensionState {
 	apiConfiguration?: ApiConfiguration
 	autoApprovalSettings: AutoApprovalSettings
 	browserSettings: BrowserSettings
+	fileEditStatistics?: {
+		totalSuggestions: number
+		acceptedSuggestions: number
+	}
 	remoteBrowserHost?: string
 	chatSettings: ChatSettings
 	checkpointTrackerErrorMessage?: string

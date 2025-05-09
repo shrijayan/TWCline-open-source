@@ -5,6 +5,7 @@ import * as vscode from "vscode"
 import pWaitFor from "p-wait-for"
 import { Logger } from "./services/logging/Logger"
 import { createClineAPI } from "./exports"
+import { registerCommands } from "./core/commands"
 import "./utils/path" // necessary to have access to String.prototype.toPosix
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import assert from "node:assert"
@@ -40,6 +41,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Initialize test mode and add disposables to context
 	context.subscriptions.push(...initializeTestMode(context, sidebarWebview))
+	
+	// Register custom commands
+	registerCommands(context, sidebarWebview.controller)
 
 	vscode.commands.executeCommand("setContext", "cline.isDevMode", IS_DEV && IS_DEV === "true")
 
