@@ -20,6 +20,7 @@ import { ClineAccountService } from "@services/account/ClineAccountService"
 import { BrowserSession } from "@services/browser/BrowserSession"
 import { McpHub } from "@services/mcp/McpHub"
 import { searchWorkspaceFiles } from "@services/search/file-search"
+import { THOUGHTWORKS_SYSTEM_PROMPT } from "../prompts/custom/thoughtworks"
 import { telemetryService } from "@/services/posthog/telemetry/TelemetryService"
 import { ApiProvider, ModelInfo } from "@shared/api"
 import { ChatContent } from "@shared/ChatContent"
@@ -176,6 +177,51 @@ export class Controller {
 		)
 	}
 
+	async initTaskWithCustomPrompt(task?: string, images?: string[]) {
+		await this.clearTask()
+		const {
+			apiConfiguration,
+			customInstructions,
+			autoApprovalSettings,
+			browserSettings,
+			chatSettings,
+			shellIntegrationTimeout,
+		} = await getAllExtensionState(this.context)
+
+		if (autoApprovalSettings) {
+			const updatedAutoApprovalSettings = {
+				...autoApprovalSettings,
+				version: (autoApprovalSettings.version ?? 1) + 1,
+			}
+			await updateGlobalState(this.context, "autoApprovalSettings", updatedAutoApprovalSettings)
+		}
+
+		// Get the custom system prompt for TWSend from the thoughtworks prompt file
+		const modelSupportsBrowserUse = true // Default to true for TWSend
+		const customSystemPrompt = await THOUGHTWORKS_SYSTEM_PROMPT(cwd, modelSupportsBrowserUse, this.mcpHub, browserSettings)
+
+		this.task = new Task(
+			this.context,
+			this.mcpHub,
+			this.workspaceTracker,
+			(historyItem) => this.updateTaskHistory(historyItem),
+			() => this.postStateToWebview(),
+			(message) => this.postMessageToWebview(message),
+			(taskId) => this.reinitExistingTaskFromId(taskId),
+			() => this.cancelTask(),
+			apiConfiguration,
+			autoApprovalSettings,
+			browserSettings,
+			chatSettings,
+			shellIntegrationTimeout,
+			customInstructions,
+			task,
+			images,
+			undefined,
+			customSystemPrompt,
+		)
+	}
+
 	async reinitExistingTaskFromId(taskId: string) {
 		const history = await this.getTaskWithId(taskId)
 		if (history) {
@@ -271,6 +317,10 @@ export class Controller {
 				//this.postMessageToWebview({ type: "text", text: `Extension: ${Date.now()}` })
 				// initializing new instance of Cline will make sure that any agentically running promises in old instance don't affect our new task. this essentially creates a fresh slate for the new task
 				await this.initTask(message.text, message.images)
+				break
+			case "sendWithCustomPrompt":
+				// Handle the TWSend button click - send with custom system prompt
+				await this.initTaskWithCustomPrompt(message.message, message.images)
 				break
 			case "condense":
 				this.task?.handleWebviewAskResponse("yesButtonClicked")
@@ -855,24 +905,31 @@ export class Controller {
 			} catch (error) {
 				console.error("Failed to abort task", error)
 			}
+
+			// Wait for the task to finish aborting with increased timeout
 			await pWaitFor(
 				() =>
 					this.task === undefined ||
 					this.task.isStreaming === false ||
 					this.task.didFinishAbortingStream ||
-					this.task.isWaitingForFirstChunk, // if only first chunk is processed, then there's no need to wait for graceful abort (closes edits, browser, etc)
+					this.task.isWaitingForFirstChunk, // if only first chunk is processed, then there's no need to wait for graceful abort
 				{
-					timeout: 3_000,
+					timeout: 8_000, // Increased from 3_000 to give more time for abortion to complete
 				},
 			).catch(() => {
-				console.error("Failed to abort task")
+				console.error("Failed to abort task within timeout, forcing termination")
 			})
+
+			// Force task termination regardless of whether pWaitFor succeeded or failed
 			if (this.task) {
-				// 'abandoned' will prevent this cline instance from affecting future cline instance gui. this may happen if its hanging on a streaming request
+				// Mark as abandoned to prevent this instance from affecting future GUI operations
 				this.task.abandoned = true
+
+				// We can't directly access private properties, so rely on the abortTask method
+				// which already includes browser and diff view cleanup
 			}
-			await this.initTask(undefined, undefined, historyItem) // clears task again, so we need to abortTask manually above
-			// await this.postStateToWebview() // new Cline instance will post state when it's ready. having this here sent an empty messages array to webview leading to virtuoso having to reload the entire list
+
+			await this.initTask(undefined, undefined, historyItem)
 		}
 	}
 
