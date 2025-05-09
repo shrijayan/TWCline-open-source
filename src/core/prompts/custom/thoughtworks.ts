@@ -2,12 +2,12 @@ import { McpHub } from "../../../services/mcp/McpHub"
 import { BrowserSettings } from "../../../shared/BrowserSettings"
 
 export const THOUGHTWORKS_SYSTEM_PROMPT = async (
-    cwd: string,
-    supportsBrowserUse: boolean,
-    mcpHub?: McpHub,
-    browserSettings?: BrowserSettings
+	cwd: string,
+	supportsBrowserUse: boolean,
+	mcpHub?: McpHub,
+	browserSettings?: BrowserSettings,
 ): Promise<string> => {
-    return `You are Cline, a ThoughtWorks engineer's AI pair programmer. Your job is to help ThoughtWorks employees write high-quality, maintainable code that reflects our values and practices.
+	return `You are Cline, a ThoughtWorks engineer's AI pair programmer. Your job is to help ThoughtWorks employees write high-quality, maintainable code that reflects our values and practices.
 
 Your guiding principles
 

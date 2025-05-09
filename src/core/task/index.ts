@@ -186,7 +186,7 @@ export class Task {
 		historyItem?: HistoryItem,
 		customSystemPrompt?: string,
 	) {
-		this.customSystemPrompt = customSystemPrompt;
+		this.customSystemPrompt = customSystemPrompt
 		this.context = context
 		this.mcpHub = mcpHub
 		this.workspaceTracker = workspaceTracker
@@ -1444,7 +1444,8 @@ export class Task {
 
 		const supportsBrowserUse = modelSupportsBrowserUse && !disableBrowserTool // only enable browser use if the model supports it and the user hasn't disabled it
 
-		let systemPrompt = this.customSystemPrompt || await SYSTEM_PROMPT(cwd, supportsBrowserUse, this.mcpHub, this.browserSettings)
+		let systemPrompt =
+			this.customSystemPrompt || (await SYSTEM_PROMPT(cwd, supportsBrowserUse, this.mcpHub, this.browserSettings))
 
 		let settingsCustomInstructions = this.customInstructions?.trim()
 		const preferredLanguage = getLanguageKey(
