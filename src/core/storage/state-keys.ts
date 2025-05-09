@@ -81,5 +81,6 @@ export type GlobalStateKey =
 	| "favoritedModelIds"
 	| "requestTimeoutMs"
 	| "shellIntegrationTimeout"
+	| "metricsData"
 
 export type LocalStateKey = "localClineRulesToggles"

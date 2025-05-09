@@ -19,6 +19,8 @@ import { vscode } from "../utils/vscode"
 import { DEFAULT_BROWSER_SETTINGS } from "@shared/BrowserSettings"
 import { DEFAULT_CHAT_SETTINGS } from "@shared/ChatSettings"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
+import { MetricsData } from "@shared/metrics"
+import { WebviewMessage } from "@shared/WebviewMessage"
 
 interface ExtensionStateContextType extends ExtensionState {
 	didHydrateState: boolean
@@ -34,6 +36,8 @@ interface ExtensionStateContextType extends ExtensionState {
 	// View state
 	showMcp: boolean
 	mcpTab?: McpViewTab
+	// Metrics data
+	metricsData?: MetricsData
 
 	// Setters
 	setApiConfiguration: (config: ApiConfiguration) => void
@@ -47,6 +51,9 @@ interface ExtensionStateContextType extends ExtensionState {
 	// Navigation
 	setShowMcp: (value: boolean) => void
 	setMcpTab: (tab?: McpViewTab) => void
+	
+	// Communication
+	postMessage: (message: WebviewMessage) => void
 }
 
 const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -91,6 +98,7 @@ export const ExtensionStateContextProvider: React.FC<{
 	})
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
 	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] })
+	const [metricsData, setMetricsData] = useState<MetricsData | undefined>(undefined)
 	const handleMessage = useCallback((event: MessageEvent) => {
 		const message: ExtensionMessage = event.data
 		switch (message.type) {
@@ -152,6 +160,10 @@ export const ExtensionStateContextProvider: React.FC<{
 			}
 			case "totalTasksSize": {
 				setTotalTasksSize(message.totalTasksSize ?? null)
+				break
+			}
+			case "metricsData": {
+				setMetricsData(message.metricsData)
 				break
 			}
 		}
@@ -264,10 +276,12 @@ export const ExtensionStateContextProvider: React.FC<{
 		totalTasksSize,
 		showMcp,
 		mcpTab,
+		metricsData,
 		globalClineRulesToggles: state.globalClineRulesToggles || {},
 		localClineRulesToggles: state.localClineRulesToggles || {},
 		localCursorRulesToggles: state.localCursorRulesToggles || {},
 		localWindsurfRulesToggles: state.localWindsurfRulesToggles || {},
+		postMessage: (message: WebviewMessage) => vscode.postMessage(message),
 		setApiConfiguration: (value) =>
 			setState((prevState) => ({
 				...prevState,

@@ -47,6 +47,7 @@ export interface ExtensionMessage {
 		| "fileSearchResults"
 		| "grpc_response" // New type for gRPC responses
 		| "setActiveQuote"
+		| "metricsData" // For metrics panel
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -57,6 +58,7 @@ export interface ExtensionMessage {
 		| "accountLogoutClicked"
 		| "accountButtonClicked"
 		| "focusChatInput"
+		| "metricsButtonClicked"
 	invoke?: Invoke
 	state?: ExtensionState
 	images?: string[]
@@ -108,6 +110,7 @@ export interface ExtensionMessage {
 		is_streaming?: boolean // Whether this is part of a streaming response
 		sequence_number?: number // For ordering chunks in streaming responses
 	}
+	metricsData?: any // Metrics data for the metrics panel
 }
 
 export type Invoke = "sendMessage" | "primaryButtonClick" | "secondaryButtonClick"

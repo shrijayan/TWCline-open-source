@@ -19,6 +19,7 @@ import WorkspaceTracker from "@integrations/workspace/WorkspaceTracker"
 import { ClineAccountService } from "@services/account/ClineAccountService"
 import { BrowserSession } from "@services/browser/BrowserSession"
 import { McpHub } from "@services/mcp/McpHub"
+import { MetricsController } from "@services/metrics/MetricsController"
 import { searchWorkspaceFiles } from "@services/search/file-search"
 import { telemetryService } from "@/services/posthog/telemetry/TelemetryService"
 import { ApiProvider, ModelInfo } from "@shared/api"
@@ -67,6 +68,7 @@ export class Controller {
 	workspaceTracker: WorkspaceTracker
 	mcpHub: McpHub
 	accountService: ClineAccountService
+	metricsController: MetricsController
 	private latestAnnouncementId = "may-02-2025_16:27:00" // update to some unique identifier when we add a new announcement
 
 	constructor(
@@ -92,6 +94,8 @@ export class Controller {
 			},
 		)
 
+		this.metricsController = new MetricsController(this.context, (msg) => this.postMessage(msg))
+
 		// Clean up legacy checkpoints
 		cleanupLegacyCheckpoints(this.context.globalStorageUri.fsPath, this.outputChannel).catch((error) => {
 			console.error("Failed to cleanup legacy checkpoints:", error)
@@ -115,6 +119,7 @@ export class Controller {
 		}
 		this.workspaceTracker.dispose()
 		this.mcpHub.dispose()
+		this.metricsController.dispose()
 		this.outputChannel.appendLine("Disposed all disposables")
 
 		console.error("Controller disposed")
@@ -670,6 +675,17 @@ export class Controller {
 						)
 					}
 				}
+				break
+			}
+			case "metricsButtonClicked": {
+				await this.postMessageToWebview({
+					type: "action",
+					action: "metricsButtonClicked",
+				})
+				break
+			}
+			case "refreshMetrics": {
+				await this.metricsController.handleMetricsMessage(message)
 				break
 			}
 			// Add more switch case statements here as more webview message commands

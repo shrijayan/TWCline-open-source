@@ -177,6 +177,25 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.metricsButtonClicked", (webview: any) => {
+			WebviewProvider.getAllInstances().forEach((instance) => {
+				const openMetrics = async (instance?: WebviewProvider) => {
+					instance?.controller.postMessageToWebview({
+						type: "action",
+						action: "metricsButtonClicked",
+					})
+				}
+				const isSidebar = !webview
+				if (isSidebar) {
+					openMetrics(WebviewProvider.getSidebarInstance())
+				} else {
+					WebviewProvider.getTabInstances().forEach(openMetrics)
+				}
+			})
+		}),
+	)
+
 	/*
 	We use the text document content provider API to show the left side for diff view by creating a virtual document for the original content. This makes it readonly so users know to edit the right side if they want to keep their changes.
 
