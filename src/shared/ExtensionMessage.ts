@@ -48,6 +48,10 @@ export interface ExtensionMessage {
 		| "grpc_response" // New type for gRPC responses
 		| "setActiveQuote"
 		| "metricsData" // For metrics panel
+		| "metricsLoading" // For metrics loading state
+		| "statsAuthStateChanged" // For statistics authentication
+		| "statsAuthCallback" // For statistics authentication callback
+		| "refreshMetrics" // For refreshing metrics data
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -111,6 +115,14 @@ export interface ExtensionMessage {
 		sequence_number?: number // For ordering chunks in streaming responses
 	}
 	metricsData?: any // Metrics data for the metrics panel
+	isLoading?: boolean // Loading state for metrics
+	statsUserInfo?: {
+		displayName: string | null
+		email: string | null
+	} // User info for statistics authentication
+	// For metrics refresh
+	dateRange?: "7d" | "30d" | "all"
+	forceRecalculate?: boolean
 }
 
 export type Invoke = "sendMessage" | "primaryButtonClick" | "secondaryButtonClick"

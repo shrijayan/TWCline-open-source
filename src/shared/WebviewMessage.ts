@@ -68,6 +68,9 @@ export interface WebviewMessage {
 		| "setActiveQuote"
 		| "metricsButtonClicked"
 		| "refreshMetrics"
+		| "statsLoginClicked"
+		| "statsLogoutClicked"
+		| "statsAuthStateChanged"
 
 	// | "relaunchChromeDebugMode"
 	text?: string
@@ -125,6 +128,12 @@ export interface WebviewMessage {
 	// For metrics
 	dateRange?: "7d" | "30d" | "all"
 	forceRecalculate?: boolean
+	
+	// For statistics authentication
+	statsUser?: {
+		displayName: string | null
+		email: string | null
+	}
 }
 
 export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"

@@ -38,6 +38,12 @@ interface ExtensionStateContextType extends ExtensionState {
 	mcpTab?: McpViewTab
 	// Metrics data
 	metricsData?: MetricsData
+	metricsLoading?: boolean
+	// Stats authentication
+	statsUserInfo?: {
+		displayName: string | null
+		email: string | null
+	}
 
 	// Setters
 	setApiConfiguration: (config: ApiConfiguration) => void
@@ -99,6 +105,7 @@ export const ExtensionStateContextProvider: React.FC<{
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
 	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] })
 	const [metricsData, setMetricsData] = useState<MetricsData | undefined>(undefined)
+	const [metricsLoading, setMetricsLoading] = useState<boolean>(false)
 	const handleMessage = useCallback((event: MessageEvent) => {
 		const message: ExtensionMessage = event.data
 		switch (message.type) {
@@ -164,6 +171,17 @@ export const ExtensionStateContextProvider: React.FC<{
 			}
 			case "metricsData": {
 				setMetricsData(message.metricsData)
+				break
+			}
+			case "metricsLoading": {
+				setMetricsLoading(message.isLoading || false)
+				break
+			}
+			case "statsAuthStateChanged": {
+				setState((prevState) => ({
+					...prevState,
+					statsUserInfo: message.statsUserInfo
+				}))
 				break
 			}
 		}
@@ -277,6 +295,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		showMcp,
 		mcpTab,
 		metricsData,
+		metricsLoading,
 		globalClineRulesToggles: state.globalClineRulesToggles || {},
 		localClineRulesToggles: state.localClineRulesToggles || {},
 		localCursorRulesToggles: state.localCursorRulesToggles || {},

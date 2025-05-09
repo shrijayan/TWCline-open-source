@@ -68,7 +68,7 @@ export class Controller {
 	workspaceTracker: WorkspaceTracker
 	mcpHub: McpHub
 	accountService: ClineAccountService
-	metricsController: MetricsController
+	public metricsController: MetricsController
 	private latestAnnouncementId = "may-02-2025_16:27:00" // update to some unique identifier when we add a new announcement
 
 	constructor(
@@ -686,6 +686,18 @@ export class Controller {
 			}
 			case "refreshMetrics": {
 				await this.metricsController.handleMetricsMessage(message)
+				break
+			}
+			case "statsLoginClicked": {
+				console.log("Controller: statsLoginClicked message received")
+				await this.metricsController.handleMetricsMessage(message)
+				console.log("Controller: statsLoginClicked message handled")
+				break
+			}
+			case "statsLogoutClicked": {
+				console.log("Controller: statsLogoutClicked message received")
+				await this.metricsController.handleMetricsMessage(message)
+				console.log("Controller: statsLogoutClicked message handled")
 				break
 			}
 			// Add more switch case statements here as more webview message commands

@@ -302,6 +302,13 @@ export class Task {
 			} catch (error) {
 				console.error("Failed to get task directory size:", taskDir, error)
 			}
+			// Check if the task is completed by looking for completion_result messages
+			const isCompleted = this.clineMessages.some(m => m.say === "completion_result" || m.ask === "completion_result");
+			
+			// Find the timestamp of the completion message if it exists
+			const completionMessage = this.clineMessages.find(m => m.say === "completion_result" || m.ask === "completion_result");
+			const completedTs = completionMessage?.ts;
+			
 			await this.updateTaskHistory({
 				id: this.taskId,
 				ts: lastRelevantMessage.ts,
@@ -314,6 +321,8 @@ export class Task {
 				size: taskDirSize,
 				shadowGitConfigWorkTree: await this.checkpointTracker?.getShadowGitConfigWorkTree(),
 				conversationHistoryDeletedRange: this.conversationHistoryDeletedRange,
+				completed: isCompleted,
+				completedTs: completedTs,
 			})
 		} catch (error) {
 			console.error("Failed to save cline messages:", error)

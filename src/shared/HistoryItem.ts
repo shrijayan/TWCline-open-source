@@ -7,6 +7,8 @@ export type HistoryItem = {
 	cacheWrites?: number
 	cacheReads?: number
 	totalCost: number
+	completed?: boolean  // Whether the task was completed
+	completedTs?: number  // Timestamp when the task was completed
 
 	size?: number
 	shadowGitConfigWorkTree?: string

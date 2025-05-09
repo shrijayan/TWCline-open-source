@@ -224,12 +224,14 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
 				<link rel="stylesheet" type="text/css" href="${stylesUri}">
 				<link href="${codiconsUri}" rel="stylesheet" />
 				<link href="${katexCssUri}" rel="stylesheet" />
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src https://*.posthog.com https://*.firebaseauth.com https://*.firebaseio.com https://*.googleapis.com https://*.firebase.com; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https: data:; script-src 'nonce-${nonce}' 'unsafe-eval';">
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src https://*.posthog.com https://*.firebaseauth.com https://*.firebaseio.com https://*.googleapis.com https://*.firebase.com; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https: data:; script-src 'nonce-${nonce}' 'unsafe-eval' https://apis.google.com;">
+				<meta name="google-signin-client_id" content="457066567820-92ickn1a0hdg7kt7d4nuap4f2hg7p6gn.apps.googleusercontent.com">
 				<title>Cline</title>
 			</head>
 			<body>
 				<noscript>You need to enable JavaScript to run this app.</noscript>
 				<div id="root"></div>
+				<script src="https://apis.google.com/js/platform.js" async defer nonce="${nonce}"></script>
 				<script type="module" nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 		</html>
@@ -334,11 +336,13 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
 					<link rel="stylesheet" type="text/css" href="${stylesUri}">
 					<link href="${codiconsUri}" rel="stylesheet" />
 					<link href="${katexCssUri}" rel="stylesheet" />
+					<meta name="google-signin-client_id" content="457066567820-92ickn1a0hdg7kt7d4nuap4f2hg7p6gn.apps.googleusercontent.com">
 					<title>Cline</title>
 				</head>
 				<body>
 					<div id="root"></div>
 					${reactRefresh}
+					<script src="https://apis.google.com/js/platform.js" async defer nonce="${nonce}"></script>
 					<script type="module" src="${scriptUri}"></script>
 				</body>
 			</html>

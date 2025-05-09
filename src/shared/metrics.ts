@@ -36,6 +36,7 @@ export interface RawMetricsData {
     startTime: number;
     endTime?: number;
     completed: boolean;
+    completedTs?: number;  // Timestamp when the task was completed
     model?: string;
     mode?: "plan" | "act";
   }[];
@@ -46,6 +47,8 @@ export interface RawMetricsData {
     model: string;
     timestamp: number;
     cost?: number;
+    cacheWrites?: number;
+    cacheReads?: number;
   }[];
   toolUsage: {
     taskId: string;
@@ -58,4 +61,22 @@ export interface RawMetricsData {
     mode: "plan" | "act";
     timestamp: number;
   }[];
+}
+
+// For tracking task metadata to optimize incremental updates
+export interface TaskMetadataIndex {
+  [taskId: string]: {
+    lastModified: number;
+    messageCount: number;
+    hasTokenData: boolean;
+    hasCompletionStatus: boolean;
+  }
+}
+
+// For caching metrics data and metadata
+export interface MetricsCache {
+  lastCalculationTime: number;
+  taskMetadataIndex: TaskMetadataIndex;
+  rawData: RawMetricsData;
+  processedMetrics: MetricsData;
 }

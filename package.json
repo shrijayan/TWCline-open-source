@@ -44,6 +44,12 @@
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
+		"authentication": [
+			{
+				"id": "tw-cline-stats-google",
+				"label": "Cline Statistics"
+			}
+		],
 		"viewsContainers": {
 			"activitybar": [
 				{
@@ -142,7 +148,11 @@
 			},
 			{
 				"command": "cline.generateGitCommitMessage",
-				"when": "scmProvider == git"
+				"title": "Cline: Generate Git Commit Message"
+			},
+			{
+				"command": "cline.backfillTokenUsage",
+				"title": "Cline: Backfill Token Usage"
 			}
 		],
 		"menus": {

@@ -19,6 +19,8 @@ export type SecretKey =
 	| "asksageApiKey"
 	| "xaiApiKey"
 	| "sambanovaApiKey"
+	| "statsAuthToken"
+	| "statsAuthNonce"
 
 export type GlobalStateKey =
 	| "apiProvider"
@@ -82,5 +84,7 @@ export type GlobalStateKey =
 	| "requestTimeoutMs"
 	| "shellIntegrationTimeout"
 	| "metricsData"
+	| "metricsCache"
+	| "statsUserInfo"
 
 export type LocalStateKey = "localClineRulesToggles"
