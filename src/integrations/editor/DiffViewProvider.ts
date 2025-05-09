@@ -41,8 +41,8 @@ export class DiffViewProvider {
 		this.lastFirstVisibleLine = 0
 
 		// Record that a file edit suggestion was presented to the user
-		vscode.commands.executeCommand('cline.fileEditPresented')
-		
+		vscode.commands.executeCommand("cline.fileEditPresented")
+
 		// if the file is already open, ensure it's not dirty before getting its contents
 		if (fileExists) {
 			const existingDocument = vscode.workspace.textDocuments.find((doc) => arePathsEqual(doc.uri.fsPath, absolutePath))
@@ -227,7 +227,7 @@ export class DiffViewProvider {
 		}
 
 		// Notify controller that a file edit has been accepted
-		vscode.commands.executeCommand('cline.fileEditAccepted');
+		vscode.commands.executeCommand("cline.fileEditAccepted")
 
 		// get text after save in case there is any auto-formatting done by the editor
 		const postSaveContent = updatedDocument.getText()
@@ -308,10 +308,10 @@ export class DiffViewProvider {
 		const fileExists = this.editType === "modify"
 		const updatedDocument = this.activeDiffEditor.document
 		const absolutePath = path.resolve(this.cwd, this.relPath)
-		
+
 		// Notify controller that a file edit has been rejected
-		vscode.commands.executeCommand('cline.fileEditRejected');
-		
+		vscode.commands.executeCommand("cline.fileEditRejected")
+
 		if (!fileExists) {
 			if (updatedDocument.isDirty) {
 				await updatedDocument.save()

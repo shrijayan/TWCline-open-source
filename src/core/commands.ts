@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
-import { Controller } from './controller';
+import * as vscode from "vscode"
+import { Controller } from "./controller"
 
 /**
  * Register all commands that the extension provides
@@ -7,22 +7,22 @@ import { Controller } from './controller';
  * @param controller The extension controller
  */
 export function registerCommands(context: vscode.ExtensionContext, controller: Controller): void {
-  // Register file edit statistics command
-  context.subscriptions.push(
-    vscode.commands.registerCommand('cline.fileEditPresented', async () => {
-      await controller.recordFileEditPresented();
-    })
-  );
+	// Register file edit statistics command
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.fileEditPresented", async () => {
+			await controller.recordFileEditPresented()
+		}),
+	)
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand('cline.fileEditAccepted', async () => {
-      await controller.incrementAcceptedFileEdits();
-    })
-  );
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.fileEditAccepted", async () => {
+			await controller.incrementAcceptedFileEdits()
+		}),
+	)
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand('cline.fileEditRejected', async () => {
-      await controller.recordFileEditRejected();
-    })
-  );
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.fileEditRejected", async () => {
+			await controller.recordFileEditRejected()
+		}),
+	)
 }

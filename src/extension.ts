@@ -41,7 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Initialize test mode and add disposables to context
 	context.subscriptions.push(...initializeTestMode(context, sidebarWebview))
-	
+
 	// Register custom commands
 	registerCommands(context, sidebarWebview.controller)
 

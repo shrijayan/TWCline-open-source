@@ -211,7 +211,9 @@ export async function getAllExtensionState(context: vscode.ExtensionContext) {
 		getGlobalState(context, "globalClineRulesToggles") as Promise<ClineRulesToggles | undefined>,
 		getGlobalState(context, "requestTimeoutMs") as Promise<number | undefined>,
 		getGlobalState(context, "shellIntegrationTimeout") as Promise<number | undefined>,
-		getGlobalState(context, "fileEditStatistics") as Promise<{ totalSuggestions: number; acceptedSuggestions: number } | undefined>,
+		getGlobalState(context, "fileEditStatistics") as Promise<
+			{ totalSuggestions: number; acceptedSuggestions: number } | undefined
+		>,
 	])
 
 	let apiProvider: ApiProvider

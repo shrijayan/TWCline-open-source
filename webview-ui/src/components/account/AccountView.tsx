@@ -17,10 +17,10 @@ type AccountViewProps = {
 }
 
 const AccountView = ({ onDone }: AccountViewProps) => {
-	const [showStatistics, setShowStatistics] = useState(false);
+	const [showStatistics, setShowStatistics] = useState(false)
 
 	if (showStatistics) {
-		return <StatisticsView onBack={() => setShowStatistics(false)} />;
+		return <StatisticsView onBack={() => setShowStatistics(false)} />
 	}
 
 	return (
@@ -153,7 +153,7 @@ export const ClineAccountView = ({ onShowStatistics }: { onShowStatistics: () =>
 							<VSCodeButtonLink href="https://app.cline.bot/credits/#buy" className="w-full">
 								Add Credits
 							</VSCodeButtonLink>
-							
+
 							<VSCodeButton appearance="secondary" onClick={onShowStatistics} className="w-full">
 								<span className="codicon codicon-graph-line mr-2"></span>
 								Statistics

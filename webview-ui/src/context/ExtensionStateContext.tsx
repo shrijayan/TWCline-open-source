@@ -92,7 +92,10 @@ export const ExtensionStateContextProvider: React.FC<{
 	})
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
 	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] })
-	const [fileEditStatistics, setFileEditStatistics] = useState<FileEditStatistics>({ totalSuggestions: 0, acceptedSuggestions: 0 })
+	const [fileEditStatistics, setFileEditStatistics] = useState<FileEditStatistics>({
+		totalSuggestions: 0,
+		acceptedSuggestions: 0,
+	})
 	const handleMessage = useCallback((event: MessageEvent) => {
 		const message: ExtensionMessage = event.data
 		switch (message.type) {
