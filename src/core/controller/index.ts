@@ -28,6 +28,7 @@ import { ChatSettings } from "@shared/ChatSettings"
 import { ExtensionMessage, ExtensionState, Invoke, Platform } from "@shared/ExtensionMessage"
 import { HistoryItem } from "@shared/HistoryItem"
 import { McpDownloadResponse, McpMarketplaceCatalog, McpServer } from "@shared/mcp"
+import { FileEditStatistics } from "@shared/Statistics"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
 import { WebviewMessage } from "@shared/WebviewMessage"
 import { fileExistsAtPath } from "@utils/fs"
@@ -173,6 +174,8 @@ export class Controller {
 			task,
 			images,
 			historyItem,
+			undefined, // customSystemPrompt parameter
+			this, // Pass controller instance
 		)
 	}
 
@@ -218,6 +221,7 @@ export class Controller {
 			images,
 			undefined,
 			customSystemPrompt,
+			this, // Pass controller instance
 		)
 	}
 
@@ -1902,10 +1906,11 @@ Commit message:`
 	 */
 	async fetchFileEditStatistics() {
 		console.log("Fetching file edit statistics...")
-		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
-			totalSuggestions: number
-			acceptedSuggestions: number
-		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
+		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as FileEditStatistics) || {
+			totalSuggestions: 0,
+			acceptedSuggestions: 0,
+			promptQuality: undefined,
+		}
 
 		console.log("Retrieved file edit statistics:", stats)
 
@@ -1916,5 +1921,95 @@ Commit message:`
 
 		console.log("Sent file edit statistics to webview")
 		return stats
+	}
+
+	/**
+	 * Evaluate the quality of a user's first prompt in a new chat
+	 * @param prompt The user's first prompt in a new chat session
+	 */
+	async evaluatePromptQuality(prompt: string) {
+		console.log("Evaluating prompt quality for first message in new chat...")
+
+		try {
+			// Get the current API configuration
+			const { apiConfiguration } = await getAllExtensionState(this.context)
+
+			// Build the API handler
+			const apiHandler = buildApiHandler(apiConfiguration)
+
+			// Create the evaluation prompt
+			const systemPrompt =
+				"You are an AI assistant that evaluates the quality of user prompts. Basically, the user will be giving a prompt for code developing agent. Thus, so the user prompt will be like one editing a code base, or it may be a starting a new project. So evaluate in that criteria. If the user have given everything in a single prompt then give a reduced score. If he gives a breakdown task, give a slightly higher score. This should not be a major factor but consider this also."
+			const evaluationPrompt = `The user prompt is given below, now evaluate the quality of the user prompt from 0 to 100\n\n${prompt}`
+
+			// Create a message for the API
+			const messages = [
+				{
+					role: "user" as const,
+					content: evaluationPrompt,
+				},
+			]
+
+			// Call the API
+			const stream = apiHandler.createMessage(systemPrompt, messages)
+
+			// Collect the response
+			let response = ""
+			for await (const chunk of stream) {
+				if (chunk.type === "text") {
+					response += chunk.text
+				}
+			}
+
+			// Extract the score - look for a number between 0-100
+			const scoreMatch = response.match(/\b([0-9]|[1-9][0-9]|100)\b/)
+			let score: number | undefined = undefined
+
+			if (scoreMatch) {
+				score = parseInt(scoreMatch[0], 10)
+				console.log(`Prompt quality score: ${score}`)
+
+				// Retrieve current statistics
+				const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as FileEditStatistics) || {
+					totalSuggestions: 0,
+					acceptedSuggestions: 0,
+					promptQuality: undefined,
+				}
+
+				// Calculate the new rolling average
+				let newQualityScore: number
+				if (stats.promptQuality === undefined) {
+					// First time calculation
+					newQualityScore = score
+				} else {
+					// Calculate rolling average: (previous_score + new_score) / 2
+					newQualityScore = Math.round((stats.promptQuality + score) / 2)
+				}
+
+				console.log(
+					`Previous prompt quality: ${stats.promptQuality}, New quality: ${score}, Rolling average: ${newQualityScore}`,
+				)
+
+				// Update the prompt quality score with the rolling average
+				stats.promptQuality = newQualityScore
+
+				// Save updated statistics
+				await updateGlobalState(this.context, "fileEditStatistics", stats)
+
+				// Send updated statistics to webview
+				await this.postMessageToWebview({
+					type: "fileEditStatistics",
+					fileEditStatistics: stats,
+				})
+
+				return score
+			} else {
+				console.error("Failed to extract prompt quality score from response:", response)
+				return undefined
+			}
+		} catch (error) {
+			console.error("Error evaluating prompt quality:", error)
+			return undefined
+		}
 	}
 }

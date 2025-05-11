@@ -95,6 +95,7 @@ export const ExtensionStateContextProvider: React.FC<{
 	const [fileEditStatistics, setFileEditStatistics] = useState<FileEditStatistics>({
 		totalSuggestions: 0,
 		acceptedSuggestions: 0,
+		promptQuality: undefined,
 	})
 	const handleMessage = useCallback((event: MessageEvent) => {
 		const message: ExtensionMessage = event.data
