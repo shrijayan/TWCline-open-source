@@ -510,7 +510,7 @@ export const ChatRowContent = ({
 							{toolIcon("edit")}
 							{tool.operationIsLocatedInWorkspace === false &&
 								toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
-							<span style={{ fontWeight: "bold" }}>Cline wants to edit this file:</span>
+							<span style={{ fontWeight: "bold" }}>TWCline wants to edit this file:</span>
 						</div>
 						<CodeAccordian
 							// isLoading={message.partial}
@@ -548,7 +548,7 @@ export const ChatRowContent = ({
 								toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
 							<span style={{ fontWeight: "bold" }}>
 								{/* {message.type === "ask" ? "" : "Cline read this file:"} */}
-								Cline wants to read this file:
+								TWCline wants to read this file:
 							</span>
 						</div>
 						<div

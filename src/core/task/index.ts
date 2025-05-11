@@ -186,7 +186,9 @@ export class Task {
 		task?: string,
 		images?: string[],
 		historyItem?: HistoryItem,
+		customSystemPrompt?: string,
 	) {
+		this.customSystemPrompt = customSystemPrompt
 		this.context = context
 		this.mcpHub = mcpHub
 		this.workspaceTracker = workspaceTracker
@@ -1442,6 +1444,8 @@ export class Task {
 		return statusCode && !message.includes(statusCode.toString()) ? `${statusCode} - ${message}` : message
 	}
 
+	private customSystemPrompt?: string
+
 	async *attemptApiRequest(previousApiReqIndex: number): ApiStream {
 		// Wait for MCP servers to be connected before generating system prompt
 		await pWaitFor(() => this.mcpHub.isConnecting !== true, { timeout: 10_000 }).catch(() => {
@@ -1454,7 +1458,8 @@ export class Task {
 
 		const supportsBrowserUse = modelSupportsBrowserUse && !disableBrowserTool // only enable browser use if the model supports it and the user hasn't disabled it
 
-		let systemPrompt = await SYSTEM_PROMPT(cwd, supportsBrowserUse, this.mcpHub, this.browserSettings)
+		let systemPrompt =
+			this.customSystemPrompt || (await SYSTEM_PROMPT(cwd, supportsBrowserUse, this.mcpHub, this.browserSettings))
 
 		let settingsCustomInstructions = this.customInstructions?.trim()
 		const preferredLanguage = getLanguageKey(

@@ -45,6 +45,7 @@ export interface ExtensionMessage {
 		| "fileSearchResults"
 		| "grpc_response" // New type for gRPC responses
 		| "setActiveQuote"
+		| "sendWithCustomPrompt" // New type for sending with custom prompt
 	text?: string
 	action?:
 		| "chatButtonClicked"

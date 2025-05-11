@@ -12,6 +12,7 @@ export interface WebviewMessage {
 		| "apiConfiguration"
 		| "webviewDidLaunch"
 		| "newTask"
+		| "sendWithCustomPrompt"
 		| "condense"
 		| "reportBug"
 		| "askResponse"
@@ -68,6 +69,7 @@ export interface WebviewMessage {
 
 	// | "relaunchChromeDebugMode"
 	text?: string
+	message?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
 	apiConfiguration?: ApiConfiguration

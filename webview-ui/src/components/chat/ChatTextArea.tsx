@@ -294,6 +294,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const shiftHoldTimerRef = useRef<NodeJS.Timeout | null>(null)
 		const [showUnsupportedFileError, setShowUnsupportedFileError] = useState(false)
 		const unsupportedFileTimerRef = useRef<NodeJS.Timeout | null>(null)
+		const sendDropdownRef = useRef<HTMLDivElement | null>(null)
+		const [showSendDropdown, setShowSendDropdown] = useState(false)
+
+		// Add click-away handler for the send dropdown
+		useClickAway(sendDropdownRef, () => {
+			setShowSendDropdown(false)
+		})
 		const [showDimensionError, setShowDimensionError] = useState(false)
 		const dimensionErrorTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -961,7 +968,43 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		useShortcut("Meta+Shift+a", onModeToggle, { disableTextInputs: false }) // important that we don't disable the text input here
 
+		// Add shortcut for TWSend (Option+Return on Mac, Alt+Enter on other platforms)
+		useShortcut(
+			"Alt+Enter",
+			() => {
+				if (!textAreaDisabled) {
+					setIsTextAreaFocused(false)
+					// Send with TWSend flag
+					vscode.postMessage({
+						type: "sendWithCustomPrompt",
+						message: inputValue,
+						images: selectedImages.length > 0 ? selectedImages : undefined,
+					})
+				}
+			},
+			{ disableTextInputs: false },
+		) // Important to not disable text inputs so it works inside textarea
+
+		// Add shortcut for TWSend (Option+Return on Mac, Alt+Enter on other platforms)
+		useShortcut(
+			"Alt+Enter",
+			() => {
+				if (!textAreaDisabled) {
+					setIsTextAreaFocused(false)
+					// Send with TWSend flag
+					vscode.postMessage({
+						type: "sendWithCustomPrompt",
+						message: inputValue,
+						images: selectedImages.length > 0 ? selectedImages : undefined,
+					})
+				}
+			},
+			{ disableTextInputs: false },
+		) // Important to not disable text inputs so it works inside textarea
+
 		const handleContextButtonClick = useCallback(() => {
+            if (textAreaDisabled) return
+            
 			// Focus the textarea first
 			textAreaRef.current?.focus()
 
@@ -1519,7 +1562,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					<div
 						style={{
 							position: "absolute",
-							right: 23,
+							right: 28,
 							display: "flex",
 							alignItems: "flex-center",
 							height: textAreaBaseHeight || 31,
@@ -1544,16 +1587,110 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									fontSize: 16.5,
 								}}
 							/> */}
-							<div
-								data-testid="send-button"
-								className={`input-icon-button ${sendingDisabled ? "disabled" : ""} codicon codicon-send`}
-								onClick={() => {
-									if (!sendingDisabled) {
-										setIsTextAreaFocused(false)
-										onSend()
-									}
-								}}
-								style={{ fontSize: 15 }}></div>
+							<div style={{ position: "relative" }}>
+								<div
+									data-testid="send-button"
+									className={`input-icon-button ${sendingDisabled ? "disabled" : ""} codicon codicon-send`}
+									onClick={() => {
+										if (!sendingDisabled) {
+											setIsTextAreaFocused(false)
+											onSend()
+										}
+									}}
+									style={{ fontSize: 15 }}></div>
+								<div
+									className={`input-icon-button ${textAreaDisabled ? "disabled" : ""} codicon codicon-chevron-down`}
+									onClick={(e) => {
+										if (!textAreaDisabled) {
+											e.stopPropagation()
+											setShowSendDropdown(!showSendDropdown)
+										}
+									}}
+									style={{
+										fontSize: 12,
+										position: "absolute",
+										right: -10,
+										bottom: -2,
+										cursor: "pointer",
+									}}></div>
+								<div
+									ref={sendDropdownRef}
+									style={{
+										display: showSendDropdown ? "block" : "none",
+										position: "absolute",
+										bottom: "100%",
+										right: 0,
+										backgroundColor: "var(--vscode-editor-background)",
+										border: "1px solid var(--vscode-input-border)",
+										borderRadius: "6px",
+										padding: "8px 0",
+										zIndex: 2000,
+										marginBottom: "10px",
+										marginRight: "2px",
+										boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+										minWidth: "180px",
+										transform: showSendDropdown ? "translateY(0)" : "translateY(4px)",
+										opacity: showSendDropdown ? 1 : 0,
+										transition: "transform 0.15s ease-out, opacity 0.15s ease-out",
+										overflow: "hidden",
+									}}>
+									{/* Caret pointing down */}
+									<div
+										style={{
+											position: "absolute",
+											bottom: "-5px",
+											right: "10px",
+											width: "10px",
+											height: "10px",
+											backgroundColor: "var(--vscode-editor-background)",
+											border: "1px solid var(--vscode-input-border)",
+											borderWidth: "0 1px 1px 0",
+											transform: "rotate(45deg)",
+										}}
+									/>
+									<div
+										style={{
+											padding: "8px 12px",
+											cursor: "pointer",
+											fontSize: "12px",
+											color: "var(--vscode-input-foreground)",
+											display: "flex",
+											justifyContent: "space-between",
+											alignItems: "center",
+										}}
+										onClick={() => {
+											if (!textAreaDisabled) {
+												setIsTextAreaFocused(false)
+												// Hide dropdown
+												setShowSendDropdown(false)
+												// Send with TWSend flag
+												vscode.postMessage({
+													type: "sendWithCustomPrompt",
+													message: inputValue,
+													images: selectedImages.length > 0 ? selectedImages : undefined,
+												})
+											}
+										}}
+										onMouseOver={(e) => {
+											;(e.target as HTMLDivElement).style.backgroundColor =
+												"var(--vscode-list-hoverBackground)"
+										}}
+										onMouseOut={(e) => {
+											;(e.target as HTMLDivElement).style.backgroundColor = ""
+										}}>
+										<span>TWSend</span>
+										<span
+											style={{
+												marginLeft: "8px",
+												fontSize: "10px",
+												opacity: 0.7,
+												whiteSpace: "nowrap",
+											}}>
+											⌥↩
+										</span>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
