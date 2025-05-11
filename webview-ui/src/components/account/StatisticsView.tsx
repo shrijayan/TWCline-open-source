@@ -81,7 +81,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onBack }) => {
 						</div>
 					</div>
 				</div>
-				
+
 				<div className="border border-[var(--vscode-editorWidget-border)] rounded-md p-4 bg-[var(--vscode-editor-background)]">
 					<div>
 						<h3 className="text-md font-medium mb-2">Prompt Quality</h3>
@@ -89,9 +89,10 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onBack }) => {
 							<div>
 								<div className="text-sm text-[var(--vscode-descriptionForeground)]">Average Quality Score</div>
 								<div className="text-2xl font-semibold mt-1">
-									{(fileEditStatistics as FileEditStatistics & { promptQuality?: number }).promptQuality !== undefined 
-										? `${(fileEditStatistics as FileEditStatistics & { promptQuality?: number }).promptQuality}%` 
-										: 'Not yet calculated'}
+									{(fileEditStatistics as FileEditStatistics & { promptQuality?: number }).promptQuality !==
+									undefined
+										? `${(fileEditStatistics as FileEditStatistics & { promptQuality?: number }).promptQuality}%`
+										: "Not yet calculated"}
 									<span className="text-sm ml-2 text-[var(--vscode-descriptionForeground)]">
 										(Based on first prompt in new chats)
 									</span>
