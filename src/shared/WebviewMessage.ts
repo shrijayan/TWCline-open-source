@@ -66,6 +66,9 @@ export interface WebviewMessage {
 		| "copyToClipboard"
 		| "updateTerminalConnectionTimeout"
 		| "setActiveQuote"
+		| "fetchFileEditStatistics"
+		| "fileEditAccepted"
+		| "fileEditRejected"
 
 	// | "relaunchChromeDebugMode"
 	text?: string

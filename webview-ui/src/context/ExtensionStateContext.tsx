@@ -4,6 +4,7 @@ import { StateServiceClient } from "../services/grpc-client"
 import { EmptyRequest } from "@shared/proto/common"
 import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
 import { ExtensionMessage, ExtensionState, DEFAULT_PLATFORM } from "@shared/ExtensionMessage"
+import { FileEditStatistics } from "@shared/Statistics"
 import {
 	ApiConfiguration,
 	ModelInfo,
@@ -91,6 +92,10 @@ export const ExtensionStateContextProvider: React.FC<{
 	})
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
 	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] })
+	const [fileEditStatistics, setFileEditStatistics] = useState<FileEditStatistics>({
+		totalSuggestions: 0,
+		acceptedSuggestions: 0,
+	})
 	const handleMessage = useCallback((event: MessageEvent) => {
 		const message: ExtensionMessage = event.data
 		switch (message.type) {
@@ -152,6 +157,12 @@ export const ExtensionStateContextProvider: React.FC<{
 			}
 			case "totalTasksSize": {
 				setTotalTasksSize(message.totalTasksSize ?? null)
+				break
+			}
+			case "fileEditStatistics": {
+				if (message.fileEditStatistics) {
+					setFileEditStatistics(message.fileEditStatistics)
+				}
 				break
 			}
 		}
@@ -264,6 +275,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		totalTasksSize,
 		showMcp,
 		mcpTab,
+		fileEditStatistics,
 		globalClineRulesToggles: state.globalClineRulesToggles || {},
 		localClineRulesToggles: state.localClineRulesToggles || {},
 		localCursorRulesToggles: state.localCursorRulesToggles || {},
