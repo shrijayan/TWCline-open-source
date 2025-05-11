@@ -260,6 +260,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		ref,
 	) => {
 		const { filePaths, chatSettings, apiConfiguration, openRouterModels, platform } = useExtensionState()
+		const textAreaDisabled = sendingDisabled // Define textAreaDisabled based on sendingDisabled
 		const [isTextAreaFocused, setIsTextAreaFocused] = useState(false)
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
 		const [gitCommits, setGitCommits] = useState<GitCommit[]>([])
@@ -1003,8 +1004,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		) // Important to not disable text inputs so it works inside textarea
 
 		const handleContextButtonClick = useCallback(() => {
-            if (textAreaDisabled) return
-            
+			if (textAreaDisabled) return
+
 			// Focus the textarea first
 			textAreaRef.current?.focus()
 
