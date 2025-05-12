@@ -29,6 +29,7 @@ export interface WebviewMessage {
 		| "deleteMcpServer"
 		| "autoApprovalSettings"
 		| "browserRelaunchResult"
+		| "checkGitCommits"
 		| "togglePlanActMode"
 		| "taskCompletionViewChanges"
 		| "openExtensionSettings"

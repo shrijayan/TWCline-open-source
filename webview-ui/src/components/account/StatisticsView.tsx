@@ -2,6 +2,7 @@ import React, { useEffect } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { vscode } from "@/utils/vscode"
 import { VSCodeButton, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
+import { FileEditStatistics } from "@shared/Statistics"
 
 interface StatisticsViewProps {
 	onBack: () => void
@@ -60,7 +61,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onBack }) => {
 				<VSCodeButton onClick={onBack}>Back</VSCodeButton>
 			</div>
 			<div className="flex-grow overflow-hidden pr-[8px] flex flex-col">
-				<div className="border border-[var(--vscode-editorWidget-border)] rounded-md p-4 bg-[var(--vscode-editor-background)]">
+				<div className="border border-[var(--vscode-editorWidget-border)] rounded-md p-4 bg-[var(--vscode-editor-background)] mb-4">
 					<div className="mb-4">
 						<h3 className="text-md font-medium mb-2">File Edit Suggestions</h3>
 						<div className="grid grid-cols-2 gap-4">
@@ -77,6 +78,67 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onBack }) => {
 									</span>
 								</div>
 							</div>
+						</div>
+					</div>
+				</div>
+
+				<div className="border border-[var(--vscode-editorWidget-border)] rounded-md p-4 bg-[var(--vscode-editor-background)] mb-4">
+					<div>
+						<h3 className="text-md font-medium mb-2">Prompt Quality</h3>
+						<div className="grid grid-cols-1 gap-4">
+							<div>
+								<div className="text-sm text-[var(--vscode-descriptionForeground)]">Average Quality Score</div>
+								<div className="text-2xl font-semibold mt-1">
+									{(fileEditStatistics as FileEditStatistics).promptQuality !== undefined
+										? `${(fileEditStatistics as FileEditStatistics).promptQuality}%`
+										: "Not yet calculated"}
+									<span className="text-sm ml-2 text-[var(--vscode-descriptionForeground)]">
+										(Based on first prompt in new chats)
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div className="border border-[var(--vscode-editorWidget-border)] rounded-md p-4 bg-[var(--vscode-editor-background)]">
+					<div>
+						<h3 className="text-md font-medium mb-2">Code Commit Stats</h3>
+						<div className="grid grid-cols-2 gap-4">
+							<div className="border-r border-[var(--vscode-editorWidget-border)] pr-4">
+								<div className="text-sm text-[var(--vscode-descriptionForeground)]">Lines Written</div>
+								<div className="text-2xl font-semibold mt-1">
+									{(fileEditStatistics as any).totalLinesWritten || 0}
+								</div>
+							</div>
+							<div>
+								<div className="text-sm text-[var(--vscode-descriptionForeground)]">Commit Ratio</div>
+								<div className="text-2xl font-semibold mt-1">
+									{(fileEditStatistics as any).commitRatio || 0}%
+									<div className="text-sm text-[var(--vscode-descriptionForeground)]">
+										({(fileEditStatistics as any).totalLinesCommitted || 0} lines committed)
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="mt-3 flex justify-between items-center">
+							{(fileEditStatistics as any).lastCheckTimestamp && (
+								<div className="text-xs text-[var(--vscode-descriptionForeground)]">
+									Last checked: {new Date((fileEditStatistics as any).lastCheckTimestamp).toLocaleString()}
+								</div>
+							)}
+							<VSCodeButton
+								appearance="secondary"
+								onClick={() => {
+									vscode.postMessage({
+										type: "checkGitCommits",
+									})
+									vscode.postMessage({
+										type: "fetchFileEditStatistics",
+									})
+								}}>
+								Check Now
+							</VSCodeButton>
 						</div>
 					</div>
 				</div>

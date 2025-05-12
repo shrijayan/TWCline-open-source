@@ -22,12 +22,16 @@ import { BrowserSession } from "@services/browser/BrowserSession"
 import { McpHub } from "@services/mcp/McpHub"
 import { THOUGHTWORKS_SYSTEM_PROMPT } from "../prompts/custom/thoughtworks"
 import { telemetryService } from "@/services/posthog/telemetry/TelemetryService"
+import { GitCommitChecker } from "@integrations/git/GitCommitChecker"
+import { recordLinesWritten } from "@integrations/git/LineTracker"
+import { runGitCommitCheckDiagnosis } from "@integrations/git/check-commits-debug"
 import { ApiProvider, ModelInfo } from "@shared/api"
 import { ChatContent } from "@shared/ChatContent"
 import { ChatSettings } from "@shared/ChatSettings"
 import { ExtensionMessage, ExtensionState, Invoke, Platform } from "@shared/ExtensionMessage"
 import { HistoryItem } from "@shared/HistoryItem"
 import { McpDownloadResponse, McpMarketplaceCatalog, McpServer } from "@shared/mcp"
+import { FileEditStatistics } from "@shared/Statistics"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
 import { WebviewMessage } from "@shared/WebviewMessage"
 import { fileExistsAtPath } from "@utils/fs"
@@ -67,6 +71,7 @@ export class Controller {
 	workspaceTracker: WorkspaceTracker
 	mcpHub: McpHub
 	accountService: ClineAccountService
+	gitCommitChecker: GitCommitChecker
 	private latestAnnouncementId = "may-09-2025_17:11:00" // update to some unique identifier when we add a new announcement
 
 	constructor(
@@ -92,6 +97,17 @@ export class Controller {
 			},
 		)
 
+		// Initialize GitCommitChecker
+		this.gitCommitChecker = new GitCommitChecker(this.context)
+		this.gitCommitChecker.startPeriodicChecks(true) // Run immediate check on startup
+
+		// Register command for recording lines written
+		this.disposables.push(
+			vscode.commands.registerCommand("cline.recordLinesWritten", (filePath: string, lines: string[]) => {
+				recordLinesWritten(this.context, filePath, lines).catch((e) => console.error("Error recording lines written:", e))
+			}),
+		)
+
 		// Clean up legacy checkpoints
 		cleanupLegacyCheckpoints(this.context.globalStorageUri.fsPath, this.outputChannel).catch((error) => {
 			console.error("Failed to cleanup legacy checkpoints:", error)
@@ -105,6 +121,12 @@ export class Controller {
 	*/
 	async dispose() {
 		this.outputChannel.appendLine("Disposing ClineProvider...")
+
+		// Run one final git commit check before disposing
+		await this.gitCommitChecker.finalCheck().catch((e) => {
+			console.error("Error in final git commit check:", e)
+		})
+
 		await this.clearTask()
 		this.outputChannel.appendLine("Cleared task")
 		while (this.disposables.length) {
@@ -115,6 +137,7 @@ export class Controller {
 		}
 		this.workspaceTracker.dispose()
 		this.mcpHub.dispose()
+		this.gitCommitChecker.dispose()
 		this.outputChannel.appendLine("Disposed all disposables")
 
 		console.error("Controller disposed")
@@ -173,6 +196,8 @@ export class Controller {
 			task,
 			images,
 			historyItem,
+			undefined, // customSystemPrompt parameter
+			this, // Pass controller instance
 		)
 	}
 
@@ -218,6 +243,7 @@ export class Controller {
 			images,
 			undefined,
 			customSystemPrompt,
+			this, // Pass controller instance
 		)
 	}
 
@@ -447,6 +473,22 @@ export class Controller {
 			}
 			case "silentlyRefreshMcpMarketplace": {
 				await this.silentlyRefreshMcpMarketplace()
+				break
+			}
+			case "checkGitCommits": {
+				// Manually trigger a git commit check with force parameter
+				if (this.gitCommitChecker) {
+					console.log("Controller: Manually triggering git commit check with force=true")
+					await this.gitCommitChecker.checkGitCommits(true)
+
+					// Also run the diagnostic script to collect additional information
+					try {
+						console.log("Controller: Running git commit diagnosis")
+						await runGitCommitCheckDiagnosis(this.context)
+					} catch (diagError) {
+						console.error("Error during git commit diagnosis:", diagError)
+					}
+				}
 				break
 			}
 			case "taskFeedback":
@@ -1902,10 +1944,11 @@ Commit message:`
 	 */
 	async fetchFileEditStatistics() {
 		console.log("Fetching file edit statistics...")
-		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
-			totalSuggestions: number
-			acceptedSuggestions: number
-		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
+		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as FileEditStatistics) || {
+			totalSuggestions: 0,
+			acceptedSuggestions: 0,
+			promptQuality: undefined,
+		}
 
 		console.log("Retrieved file edit statistics:", stats)
 
@@ -1916,5 +1959,112 @@ Commit message:`
 
 		console.log("Sent file edit statistics to webview")
 		return stats
+	}
+
+	/**
+	 * Evaluate the quality of a user's first prompt in a new chat
+	 * @param prompt The user's first prompt in a new chat session
+	 */
+	async evaluatePromptQuality(prompt: string) {
+		console.log("Evaluating prompt quality for first message in new chat...")
+
+		try {
+			// Get the current API configuration
+			const { apiConfiguration } = await getAllExtensionState(this.context)
+
+			// Build the API handler
+			const apiHandler = buildApiHandler(apiConfiguration)
+
+			// Create the evaluation prompt
+			const systemPrompt =
+				"You are an AI assistant that evaluates the quality of user prompts for coding tasks. Your job is to analyze the prompt and assign a score from 0 to 100, where higher scores indicate better prompts.\n\nEvaluation criteria:\n- Clarity: Is the request clear and unambiguous?\n- Specificity: Does it provide enough details to understand what's needed?\n- Context: Does it provide necessary context for the task?\n- Structure: Is the task well-structured and broken down appropriately?\n- Feasibility: Is the request feasible to implement?\n- Technical accuracy: Does it use correct technical terminology?\n\nProvide your evaluation as a score from 0 to 100, where:\n- 0-20: Very poor quality prompt with minimal information\n- 21-40: Poor quality prompt lacking essential details\n- 41-60: Average quality prompt with basic information\n- 61-80: Good quality prompt with substantial information\n- 81-100: Excellent quality prompt with comprehensive information and context\n\nBe more generous in scoring if the user breaks down the task clearly rather than lumping everything into one large prompt."
+			const evaluationPrompt = `The user prompt is given below, now evaluate the quality of the user prompt from 0 to 100.\n\n${prompt}\n\nFinal score (0-100):`
+
+			// Create a message for the API
+			const messages = [
+				{
+					role: "user" as const,
+					content: evaluationPrompt,
+				},
+			]
+
+			// Call the API
+			const stream = apiHandler.createMessage(systemPrompt, messages)
+
+			// Collect the response
+			let response = ""
+			for await (const chunk of stream) {
+				if (chunk.type === "text") {
+					response += chunk.text
+				}
+			}
+
+			// Extract the score - look for a number between 0-100
+			// First try to find a number after the prompt "Final score: " or similar pattern
+			let scoreMatch = response.match(/(?:final\s+score|score|rating)(?:\s*:\s*|\s+is\s+|\s+of\s+)(\d{1,3})/i)
+
+			// If that didn't work, try to find any number between 0-100
+			if (!scoreMatch) {
+				scoreMatch = response.match(/\b([0-9]|[1-9][0-9]|100)\b/)
+			}
+
+			let score: number | undefined = undefined
+
+			if (scoreMatch) {
+				// Use group 1 if it exists (from the first pattern match), otherwise use group 0
+				const extractedScore = scoreMatch[1] || scoreMatch[0]
+				score = parseInt(extractedScore, 10)
+
+				// Validate score is in range 0-100
+				if (score < 0 || score > 100) {
+					console.error(`Invalid score range: ${score}, clamping to 0-100`)
+					score = Math.max(0, Math.min(100, score))
+				}
+
+				console.log(`Prompt quality score: ${score}`)
+
+				// Retrieve current statistics
+				const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as FileEditStatistics) || {
+					totalSuggestions: 0,
+					acceptedSuggestions: 0,
+					promptQuality: undefined,
+				}
+
+				// Calculate the new rolling average - weight the existing average more heavily
+				let newQualityScore: number
+				if (stats.promptQuality === undefined) {
+					// First time calculation
+					newQualityScore = score
+				} else {
+					// Calculate weighted rolling average: (3 * previous_score + new_score) / 4
+					// This gives 75% weight to the historical average and 25% to the new score
+					newQualityScore = Math.round((3 * stats.promptQuality + score) / 4)
+				}
+
+				console.log(
+					`Previous prompt quality: ${stats.promptQuality}, New quality: ${score}, Rolling average: ${newQualityScore}`,
+				)
+
+				// Update the prompt quality score with the rolling average
+				stats.promptQuality = newQualityScore
+
+				// Save updated statistics
+				await updateGlobalState(this.context, "fileEditStatistics", stats as FileEditStatistics)
+
+				// Send updated statistics to webview
+				await this.postMessageToWebview({
+					type: "fileEditStatistics",
+					fileEditStatistics: stats,
+				})
+
+				return score
+			} else {
+				console.error("Failed to extract prompt quality score from response:", response)
+				return undefined
+			}
+		} catch (error) {
+			console.error("Error evaluating prompt quality:", error)
+			return undefined
+		}
 	}
 }

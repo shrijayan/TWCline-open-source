@@ -117,6 +117,7 @@ export class Task {
 	private postMessageToWebview: (message: ExtensionMessage) => Promise<void>
 	private reinitExistingTaskFromId: (taskId: string) => Promise<void>
 	private cancelTask: () => Promise<void>
+	private controllerRef: WeakRef<any> // Reference to the Controller to avoid circular dependencies
 
 	readonly taskId: string
 	private taskIsFavorited?: boolean
@@ -187,7 +188,10 @@ export class Task {
 		images?: string[],
 		historyItem?: HistoryItem,
 		customSystemPrompt?: string,
+		controller?: any,
 	) {
+		// Initialize controller reference - use directly passed controller if available
+		this.controllerRef = controller ? new WeakRef(controller) : new WeakRef({})
 		this.customSystemPrompt = customSystemPrompt
 		this.context = context
 		this.mcpHub = mcpHub
@@ -873,6 +877,20 @@ export class Task {
 		await this.say("text", task, images)
 
 		this.isInitialized = true
+
+		// Evaluate prompt quality for the first message in a new chat
+		if (task) {
+			// We use taskId to reference the controller instance
+			const controllerRef = this.controllerRef.deref()
+			if (controllerRef) {
+				// Use setTimeout to not block the chat initialization
+				setTimeout(() => {
+					controllerRef.evaluatePromptQuality(task).catch((error: unknown) => {
+						console.error("Error evaluating prompt quality:", error)
+					})
+				}, 0)
+			}
+		}
 
 		let imageBlocks: Anthropic.ImageBlockParam[] = formatResponse.imageBlocks(images)
 		await this.initiateTaskLoop([

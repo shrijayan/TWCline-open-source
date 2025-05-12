@@ -15,6 +15,8 @@ import { Controller } from "./core/controller"
 import { ErrorService } from "./services/error/ErrorService"
 import { initializeTestMode, cleanupTestMode } from "./services/test/TestMode"
 import { telemetryService } from "./services/posthog/telemetry/TelemetryService"
+import { runGitCommitCheckDiagnosis } from "./integrations/git/check-commits-debug"
+import { testGitCommitFix } from "./integrations/git/test-fix"
 
 /*
 Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -444,6 +446,50 @@ export function activate(context: vscode.ExtensionContext) {
 
 				await tempController.generateGitCommitMessage()
 				outputChannel.dispose()
+			}
+		}),
+	)
+
+	// Register the diagnostic check for commit tracking
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.diagnoseCommitTracking", async () => {
+			// Get the controller from any instance, without activating the view
+			const controller = WebviewProvider.getAllInstances()[0]?.controller
+
+			if (controller) {
+				try {
+					vscode.window.showInformationMessage("Running git commit tracking diagnosis...")
+					await runGitCommitCheckDiagnosis(context)
+					vscode.window.showInformationMessage(
+						"Git commit tracking diagnosis completed. Check the console for results.",
+					)
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					vscode.window.showErrorMessage(`Error running git commit diagnosis: ${errorMessage}`)
+				}
+			} else {
+				vscode.window.showErrorMessage("No active Cline instance found")
+			}
+		}),
+	)
+
+	// Register the test for git commit fix
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.testGitCommitFix", async () => {
+			// Get the controller from any instance, without activating the view
+			const controller = WebviewProvider.getAllInstances()[0]?.controller
+
+			if (controller) {
+				try {
+					vscode.window.showInformationMessage("Testing git commit fix...")
+					await testGitCommitFix(context)
+					vscode.window.showInformationMessage("Git commit fix test completed. Check the console for results.")
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					vscode.window.showErrorMessage(`Error testing git commit fix: ${errorMessage}`)
+				}
+			} else {
+				vscode.window.showErrorMessage("No active Cline instance found")
 			}
 		}),
 	)
