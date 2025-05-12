@@ -22,7 +22,6 @@ export interface WebviewMessage {
 		| "openInBrowser"
 		| "openMention"
 		| "showChatView"
-		| "refreshRequestyModels"
 		| "refreshClineRules"
 		| "openMcpSettings"
 		| "restartMcpServer"
