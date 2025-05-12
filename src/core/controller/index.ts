@@ -321,7 +321,7 @@ export class Controller {
 				// If user already opted in to telemetry, enable telemetry service
 				this.getStateToPostToWebview().then((state) => {
 					const { telemetrySetting } = state
-					const isOptedIn = telemetrySetting === "enabled"
+					const isOptedIn = telemetrySetting !== "disabled"
 					telemetryService.updateTelemetryState(isOptedIn)
 				})
 				break
@@ -773,7 +773,7 @@ export class Controller {
 
 	async updateTelemetrySetting(telemetrySetting: TelemetrySetting) {
 		await updateGlobalState(this.context, "telemetrySetting", telemetrySetting)
-		const isOptedIn = telemetrySetting === "enabled"
+		const isOptedIn = telemetrySetting !== "disabled"
 		telemetryService.updateTelemetryState(isOptedIn)
 	}
 
