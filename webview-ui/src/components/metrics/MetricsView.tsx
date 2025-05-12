@@ -246,7 +246,7 @@ const MetricsView = ({ onDone }: MetricsViewProps) => {
               </div>
               <div className="bg-[var(--vscode-sideBar-background)] p-3 rounded-md">
                 <div className="text-sm text-[var(--vscode-descriptionForeground)]">Avg. Completion Time</div>
-                <div className="text-2xl font-bold">{formatTime(metricsData.taskMetrics.averageCompletionTime)}</div>
+                <div className="text-2xl font-bold">{formatTime(metricsData.taskMetrics.averageCompletionTimeMs)}</div>
               </div>
             </div>
             <div className="h-[300px] flex items-center justify-center bg-[var(--vscode-sideBar-background)] rounded-md">

@@ -373,10 +373,11 @@ export class MetricsService {
   private getEmptyMetrics(): MetricsData {
     return {
       lastUpdated: Date.now(),
+      timestamp: Date.now(),
       taskMetrics: {
         totalTasks: 0,
         completedTasks: 0,
-        averageCompletionTime: 0,
+        averageCompletionTimeMs: 0,
         tasksPerDay: []
       },
       tokenMetrics: {
@@ -409,7 +410,7 @@ export class MetricsService {
     this.outputChannel.appendLine(`Completion Rate: ${metrics.taskMetrics.totalTasks > 0 ? 
       ((metrics.taskMetrics.completedTasks / metrics.taskMetrics.totalTasks) * 100).toFixed(2) : 0}%`)
     this.outputChannel.appendLine(`Average Completion Time: ${
-      (metrics.taskMetrics.averageCompletionTime / 1000 / 60).toFixed(2)} minutes`)
+      (metrics.taskMetrics.averageCompletionTimeMs / 1000 / 60).toFixed(2)} minutes`)
     
     // List all tasks and their completion status
     this.outputChannel.appendLine("\nTASK COMPLETION STATUS:")
@@ -1051,8 +1052,12 @@ export class MetricsService {
     // Calculate model metrics
     const modelMetrics = this.calculateModelMetrics(rawData)
     
+    // Get current timestamp
+    const now = Date.now()
+    
     return {
-      lastUpdated: Date.now(),
+      lastUpdated: now,
+      timestamp: now,
       taskMetrics,
       tokenMetrics,
       toolMetrics,
@@ -1169,7 +1174,7 @@ export class MetricsService {
     return {
       totalTasks,
       completedTasks,
-      averageCompletionTime,
+      averageCompletionTimeMs: averageCompletionTime,
       tasksPerDay
     }
   }
@@ -1248,11 +1253,23 @@ export class MetricsService {
       cost: usage.cost
     }))
     
+    // Calculate task metrics, tool metrics, and model metrics
+    // These will be populated by the parent calculateMetrics method
+    // We're just creating placeholders here to match the desired return structure
+    const taskMetrics = undefined;
+    const toolMetrics = undefined;
+    const modelMetrics = undefined;
+    
     return {
+      lastUpdated: Date.now(),
+      timestamp: Date.now(),
       totalTokensIn,
       totalTokensOut,
       totalCost,
-      usageByDay: usageByDayArray
+      usageByDay: usageByDayArray,
+      taskMetrics,
+      toolMetrics,
+      modelMetrics
     }
   }
   
