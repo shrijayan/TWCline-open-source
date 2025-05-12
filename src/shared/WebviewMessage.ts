@@ -70,6 +70,11 @@ export interface WebviewMessage {
 		| "fetchFileEditStatistics"
 		| "fileEditAccepted"
 		| "fileEditRejected"
+		| "metricsButtonClicked"
+		| "refreshMetrics"
+		| "statsLoginClicked"
+		| "statsLogoutClicked"
+		| "statsAuthStateChanged"
 
 	// | "relaunchChromeDebugMode"
 	text?: string
@@ -125,6 +130,15 @@ export interface WebviewMessage {
 
 	offset?: number
 	shellIntegrationTimeout?: number
+	// For metrics
+	dateRange?: "7d" | "30d" | "all"
+	forceRecalculate?: boolean
+	
+	// For statistics authentication
+	statsUser?: {
+		displayName: string | null
+		email: string | null
+	}
 }
 
 export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"

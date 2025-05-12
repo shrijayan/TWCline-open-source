@@ -4,7 +4,6 @@ import { StateServiceClient } from "../services/grpc-client"
 import { EmptyRequest } from "@shared/proto/common"
 import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
 import { ExtensionMessage, ExtensionState, DEFAULT_PLATFORM } from "@shared/ExtensionMessage"
-import { FileEditStatistics } from "@shared/Statistics"
 import {
 	ApiConfiguration,
 	ModelInfo,
@@ -20,6 +19,8 @@ import { vscode } from "../utils/vscode"
 import { DEFAULT_BROWSER_SETTINGS } from "@shared/BrowserSettings"
 import { DEFAULT_CHAT_SETTINGS } from "@shared/ChatSettings"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
+import { MetricsData } from "@shared/metrics"
+import { WebviewMessage } from "@shared/WebviewMessage"
 
 interface ExtensionStateContextType extends ExtensionState {
 	didHydrateState: boolean
@@ -35,6 +36,14 @@ interface ExtensionStateContextType extends ExtensionState {
 	// View state
 	showMcp: boolean
 	mcpTab?: McpViewTab
+	// Metrics data
+	metricsData?: MetricsData
+	metricsLoading?: boolean
+	// Stats authentication
+	statsUserInfo?: {
+		displayName: string | null
+		email: string | null
+	}
 
 	// Setters
 	setApiConfiguration: (config: ApiConfiguration) => void
@@ -48,6 +57,9 @@ interface ExtensionStateContextType extends ExtensionState {
 	// Navigation
 	setShowMcp: (value: boolean) => void
 	setMcpTab: (tab?: McpViewTab) => void
+	
+	// Communication
+	postMessage: (message: WebviewMessage) => void
 }
 
 const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -92,15 +104,8 @@ export const ExtensionStateContextProvider: React.FC<{
 	})
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
 	const [mcpMarketplaceCatalog, setMcpMarketplaceCatalog] = useState<McpMarketplaceCatalog>({ items: [] })
-	const [fileEditStatistics, setFileEditStatistics] = useState<FileEditStatistics>({
-		totalSuggestions: 0,
-		acceptedSuggestions: 0,
-		promptQuality: undefined,
-		totalLinesWritten: 0,
-		totalLinesCommitted: 0,
-		commitRatio: 0,
-		lastCheckTimestamp: undefined,
-	})
+	const [metricsData, setMetricsData] = useState<MetricsData | undefined>(undefined)
+	const [metricsLoading, setMetricsLoading] = useState<boolean>(false)
 	const handleMessage = useCallback((event: MessageEvent) => {
 		const message: ExtensionMessage = event.data
 		switch (message.type) {
@@ -164,10 +169,19 @@ export const ExtensionStateContextProvider: React.FC<{
 				setTotalTasksSize(message.totalTasksSize ?? null)
 				break
 			}
-			case "fileEditStatistics": {
-				if (message.fileEditStatistics) {
-					setFileEditStatistics(message.fileEditStatistics)
-				}
+			case "metricsData": {
+				setMetricsData(message.metricsData)
+				break
+			}
+			case "metricsLoading": {
+				setMetricsLoading(message.isLoading || false)
+				break
+			}
+			case "statsAuthStateChanged": {
+				setState((prevState) => ({
+					...prevState,
+					statsUserInfo: message.statsUserInfo
+				}))
 				break
 			}
 		}
@@ -280,11 +294,13 @@ export const ExtensionStateContextProvider: React.FC<{
 		totalTasksSize,
 		showMcp,
 		mcpTab,
-		fileEditStatistics,
+		metricsData,
+		metricsLoading,
 		globalClineRulesToggles: state.globalClineRulesToggles || {},
 		localClineRulesToggles: state.localClineRulesToggles || {},
 		localCursorRulesToggles: state.localCursorRulesToggles || {},
 		localWindsurfRulesToggles: state.localWindsurfRulesToggles || {},
+		postMessage: (message: WebviewMessage) => vscode.postMessage(message),
 		setApiConfiguration: (value) =>
 			setState((prevState) => ({
 				...prevState,

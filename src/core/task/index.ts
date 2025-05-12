@@ -57,7 +57,6 @@ import { DEFAULT_LANGUAGE_SETTINGS, getLanguageKey, LanguageDisplay } from "@sha
 import { ClineAskResponse, ClineCheckpointRestore } from "@shared/WebviewMessage"
 import { calculateApiCostAnthropic } from "@utils/cost"
 import { fileExistsAtPath } from "@utils/fs"
-import { createAndOpenGitHubIssue } from "@utils/github-url-utils"
 import { arePathsEqual, getReadablePath, isLocatedInWorkspace } from "@utils/path"
 import { fixModelHtmlEscaping, removeInvalidChars } from "@utils/string"
 import { AssistantMessageContent, parseAssistantMessage, ToolParamName, ToolUseName } from "@core/assistant-message"
@@ -117,10 +116,8 @@ export class Task {
 	private postMessageToWebview: (message: ExtensionMessage) => Promise<void>
 	private reinitExistingTaskFromId: (taskId: string) => Promise<void>
 	private cancelTask: () => Promise<void>
-	private controllerRef: WeakRef<any> // Reference to the Controller to avoid circular dependencies
 
 	readonly taskId: string
-	private taskIsFavorited?: boolean
 	api: ApiHandler
 	private terminalManager: TerminalManager
 	private urlContentFetcher: UrlContentFetcher
@@ -187,12 +184,7 @@ export class Task {
 		task?: string,
 		images?: string[],
 		historyItem?: HistoryItem,
-		customSystemPrompt?: string,
-		controller?: any,
 	) {
-		// Initialize controller reference - use directly passed controller if available
-		this.controllerRef = controller ? new WeakRef(controller) : new WeakRef({})
-		this.customSystemPrompt = customSystemPrompt
 		this.context = context
 		this.mcpHub = mcpHub
 		this.workspaceTracker = workspaceTracker
@@ -202,7 +194,9 @@ export class Task {
 		this.reinitExistingTaskFromId = reinitExistingTaskFromId
 		this.cancelTask = cancelTask
 		this.clineIgnoreController = new ClineIgnoreController(cwd)
-		// Initialization moved to startTask/resumeTaskFromHistory
+		this.clineIgnoreController.initialize().catch((error) => {
+			console.error("Failed to initialize ClineIgnoreController:", error)
+		})
 		this.terminalManager = new TerminalManager()
 		this.terminalManager.setShellIntegrationTimeout(shellIntegrationTimeout)
 		this.urlContentFetcher = new UrlContentFetcher(context)
@@ -217,7 +211,6 @@ export class Task {
 		// Initialize taskId first
 		if (historyItem) {
 			this.taskId = historyItem.id
-			this.taskIsFavorited = historyItem.isFavorited
 			this.conversationHistoryDeletedRange = historyItem.conversationHistoryDeletedRange
 		} else if (task || images) {
 			this.taskId = Date.now().toString()
@@ -309,6 +302,13 @@ export class Task {
 			} catch (error) {
 				console.error("Failed to get task directory size:", taskDir, error)
 			}
+			// Check if the task is completed by looking for completion_result messages
+			const isCompleted = this.clineMessages.some(m => m.say === "completion_result" || m.ask === "completion_result");
+			
+			// Find the timestamp of the completion message if it exists
+			const completionMessage = this.clineMessages.find(m => m.say === "completion_result" || m.ask === "completion_result");
+			const completedTs = completionMessage?.ts;
+			
 			await this.updateTaskHistory({
 				id: this.taskId,
 				ts: lastRelevantMessage.ts,
@@ -321,7 +321,8 @@ export class Task {
 				size: taskDirSize,
 				shadowGitConfigWorkTree: await this.checkpointTracker?.getShadowGitConfigWorkTree(),
 				conversationHistoryDeletedRange: this.conversationHistoryDeletedRange,
-				isFavorited: this.taskIsFavorited,
+				completed: isCompleted,
+				completedTs: completedTs,
 			})
 		} catch (error) {
 			console.error("Failed to save cline messages:", error)
@@ -861,12 +862,6 @@ export class Task {
 	// Task lifecycle
 
 	private async startTask(task?: string, images?: string[]): Promise<void> {
-		try {
-			await this.clineIgnoreController.initialize()
-		} catch (error) {
-			console.error("Failed to initialize ClineIgnoreController:", error)
-			// Optionally, inform the user or handle the error appropriately
-		}
 		// conversationHistory (for API) and clineMessages (for webview) need to be in sync
 		// if the extension process were killed, then on restart the clineMessages might not be empty, so we need to set it to [] when we create a new Cline client (otherwise webview would show stale messages from previous session)
 		this.clineMessages = []
@@ -877,20 +872,6 @@ export class Task {
 		await this.say("text", task, images)
 
 		this.isInitialized = true
-
-		// Evaluate prompt quality for the first message in a new chat
-		if (task) {
-			// We use taskId to reference the controller instance
-			const controllerRef = this.controllerRef.deref()
-			if (controllerRef) {
-				// Use setTimeout to not block the chat initialization
-				setTimeout(() => {
-					controllerRef.evaluatePromptQuality(task).catch((error: unknown) => {
-						console.error("Error evaluating prompt quality:", error)
-					})
-				}, 0)
-			}
-		}
 
 		let imageBlocks: Anthropic.ImageBlockParam[] = formatResponse.imageBlocks(images)
 		await this.initiateTaskLoop([
@@ -903,12 +884,6 @@ export class Task {
 	}
 
 	private async resumeTaskFromHistory() {
-		try {
-			await this.clineIgnoreController.initialize()
-		} catch (error) {
-			console.error("Failed to initialize ClineIgnoreController:", error)
-			// Optionally, inform the user or handle the error appropriately
-		}
 		// UPDATE: we don't need this anymore since most tasks are now created with checkpoints enabled
 		// right now we let users init checkpoints for old tasks, assuming they're continuing them from the same workspace (which we never tied to tasks, so no way for us to know if it's opened in the right workspace)
 		// const doesShadowGitExist = await CheckpointTracker.doesShadowGitExist(this.taskId, this.controllerRef.deref())
@@ -1462,8 +1437,6 @@ export class Task {
 		return statusCode && !message.includes(statusCode.toString()) ? `${statusCode} - ${message}` : message
 	}
 
-	private customSystemPrompt?: string
-
 	async *attemptApiRequest(previousApiReqIndex: number): ApiStream {
 		// Wait for MCP servers to be connected before generating system prompt
 		await pWaitFor(() => this.mcpHub.isConnecting !== true, { timeout: 10_000 }).catch(() => {
@@ -1476,8 +1449,7 @@ export class Task {
 
 		const supportsBrowserUse = modelSupportsBrowserUse && !disableBrowserTool // only enable browser use if the model supports it and the user hasn't disabled it
 
-		let systemPrompt =
-			this.customSystemPrompt || (await SYSTEM_PROMPT(cwd, supportsBrowserUse, this.mcpHub, this.browserSettings))
+		let systemPrompt = await SYSTEM_PROMPT(cwd, supportsBrowserUse, this.mcpHub, this.browserSettings)
 
 		let settingsCustomInstructions = this.customInstructions?.trim()
 		const preferredLanguage = getLanguageKey(
@@ -1748,8 +1720,6 @@ export class Task {
 							return `[${block.name} for creating a new task]`
 						case "condense":
 							return `[${block.name}]`
-						case "report_bug":
-							return `[${block.name}]`
 						case "new_rule":
 							return `[${block.name} for '${block.params.path}']`
 					}
@@ -1955,7 +1925,7 @@ export class Task {
 											: "other_diff_error"
 
 									// Add telemetry for diff edit failure
-									telemetryService.captureDiffEditFailure(this.taskId, this.api.getModel().id, errorType)
+									telemetryService.captureDiffEditFailure(this.taskId, errorType)
 
 									pushToolResult(
 										formatResponse.toolError(
@@ -3173,135 +3143,6 @@ export class Task {
 							}
 						} catch (error) {
 							await handleError("condensing context window", error)
-							await this.saveCheckpoint()
-							break
-						}
-					}
-					case "report_bug": {
-						const title = block.params.title
-						const what_happened = block.params.what_happened
-						const steps_to_reproduce = block.params.steps_to_reproduce
-						const api_request_output = block.params.api_request_output
-						const additional_context = block.params.additional_context
-
-						try {
-							if (block.partial) {
-								await this.ask(
-									"report_bug",
-									JSON.stringify({
-										title: removeClosingTag("title", title),
-										what_happened: removeClosingTag("what_happened", what_happened),
-										steps_to_reproduce: removeClosingTag("steps_to_reproduce", steps_to_reproduce),
-										api_request_output: removeClosingTag("api_request_output", api_request_output),
-										additional_context: removeClosingTag("additional_context", additional_context),
-									}),
-									block.partial,
-								).catch(() => {})
-								break
-							} else {
-								if (!title) {
-									this.consecutiveMistakeCount++
-									pushToolResult(await this.sayAndCreateMissingParamError("report_bug", "title"))
-									await this.saveCheckpoint()
-									break
-								}
-								if (!what_happened) {
-									this.consecutiveMistakeCount++
-									pushToolResult(await this.sayAndCreateMissingParamError("report_bug", "what_happened"))
-									await this.saveCheckpoint()
-									break
-								}
-								if (!steps_to_reproduce) {
-									this.consecutiveMistakeCount++
-									pushToolResult(await this.sayAndCreateMissingParamError("report_bug", "steps_to_reproduce"))
-									await this.saveCheckpoint()
-									break
-								}
-								if (!api_request_output) {
-									this.consecutiveMistakeCount++
-									pushToolResult(await this.sayAndCreateMissingParamError("report_bug", "api_request_output"))
-									await this.saveCheckpoint()
-									break
-								}
-								if (!additional_context) {
-									this.consecutiveMistakeCount++
-									pushToolResult(await this.sayAndCreateMissingParamError("report_bug", "additional_context"))
-									await this.saveCheckpoint()
-									break
-								}
-
-								this.consecutiveMistakeCount = 0
-
-								if (this.autoApprovalSettings.enabled && this.autoApprovalSettings.enableNotifications) {
-									showSystemNotification({
-										subtitle: "Cline wants to create a github issue...",
-										message: `Cline is suggesting to create a github issue with the title: ${title}`,
-									})
-								}
-
-								// Derive system information values algorithmically
-								const operatingSystem = os.platform() + " " + os.release()
-								const clineVersion =
-									vscode.extensions.getExtension("saoudrizwan.claude-dev")?.packageJSON.version || "Unknown"
-								const systemInfo = `VSCode: ${vscode.version}, Node.js: ${process.version}, Architecture: ${os.arch()}`
-								const providerAndModel = `${(await getGlobalState(this.getContext(), "apiProvider")) as string} / ${this.api.getModel().id}`
-
-								// Ask user for confirmation
-								const bugReportData = JSON.stringify({
-									title,
-									what_happened,
-									steps_to_reproduce,
-									api_request_output,
-									additional_context,
-									// Include derived values in the JSON for display purposes
-									provider_and_model: providerAndModel,
-									operating_system: operatingSystem,
-									system_info: systemInfo,
-									cline_version: clineVersion,
-								})
-
-								const { text, images } = await this.ask("report_bug", bugReportData, false)
-
-								// If the user provided a response, treat it as feedback
-								if (text || images?.length) {
-									await this.say("user_feedback", text ?? "", images)
-									pushToolResult(
-										formatResponse.toolResult(
-											`The user provided feedback on the Github issue generated:\n<feedback>\n${text}\n</feedback>`,
-											images,
-										),
-									)
-								} else {
-									// If no response, the user accepted the condensed version
-									pushToolResult(
-										formatResponse.toolResult(`The user accepted the creation of the Github issue.`),
-									)
-
-									try {
-										// Create a Map of parameters for the GitHub issue
-										const params = new Map<string, string>()
-										params.set("title", title)
-										params.set("operating-system", operatingSystem)
-										params.set("cline-version", clineVersion)
-										params.set("system-info", systemInfo)
-										params.set("additional-context", additional_context)
-										params.set("what-happened", what_happened)
-										params.set("steps", steps_to_reproduce)
-										params.set("provider-model", providerAndModel)
-										params.set("logs", api_request_output)
-
-										// Use our utility function to create and open the GitHub issue URL
-										// This bypasses VS Code's URI handling issues with special characters
-										await createAndOpenGitHubIssue("cline", "cline", "bug_report.yml", params)
-									} catch (error) {
-										console.error(`An error occurred while attempting to report the bug: ${error}`)
-									}
-								}
-								await this.saveCheckpoint()
-								break
-							}
-						} catch (error) {
-							await handleError("reporting bug", error)
 							await this.saveCheckpoint()
 							break
 						}

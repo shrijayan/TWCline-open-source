@@ -17,6 +17,31 @@ import { initializeTestMode, cleanupTestMode } from "./services/test/TestMode"
 import { telemetryService } from "./services/posthog/telemetry/TelemetryService"
 import { runGitCommitCheckDiagnosis } from "./integrations/git/check-commits-debug"
 import { testGitCommitFix } from "./integrations/git/test-fix"
+import { TokenBackfillService } from "./services/metrics/TokenBackfillService"
+import * as crypto from "crypto"
+import axios from "axios"
+
+// PKCE helper functions for secure OAuth
+const base64URLEncode = (buffer: Uint8Array): string => {
+	return Buffer.from(buffer)
+		.toString('base64')
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=/g, '');
+};
+
+const generateCodeVerifier = (): string => {
+	const array = new Uint8Array(32);
+	crypto.randomFillSync(array);
+	return base64URLEncode(array);
+};
+
+const generateCodeChallenge = async (verifier: string): Promise<string> => {
+	const hash = crypto.createHash('sha256').update(verifier).digest();
+	// Convert Buffer to Uint8Array
+	const uint8Array = new Uint8Array(hash.buffer.slice(hash.byteOffset, hash.byteOffset + hash.byteLength));
+	return base64URLEncode(uint8Array);
+};
 
 /*
 Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -38,6 +63,102 @@ export function activate(context: vscode.ExtensionContext) {
 	ErrorService.initialize()
 	Logger.initialize(outputChannel)
 	Logger.log("Cline extension activated")
+	
+	// Initialize token backfill service
+	const tokenBackfillService = new TokenBackfillService(context)
+	
+	// Run token backfill on extension activation with a delay to not impact startup performance
+	setTimeout(async () => {
+		try {
+			const updatedCount = await tokenBackfillService.backfillAllTasks()
+			Logger.log(`Token backfill complete. Updated ${updatedCount} tasks.`)
+		} catch (error) {
+			Logger.error("Error during token backfill:", error)
+		}
+	}, 10000) // 10 second delay
+
+	// Register the Google authentication provider for statistics
+	const sessionChangeEmitter = new vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>();
+	const googleAuthProvider = vscode.authentication.registerAuthenticationProvider(
+		'tw-cline-stats-google',
+		'Cline Statistics',
+		{
+			onDidChangeSessions: sessionChangeEmitter.event,
+			getSessions: async () => {
+				// Get sessions from storage
+				const sessionData = context.globalState.get<any>('tw-cline-stats-google-sessions');
+				if (sessionData) {
+					return [sessionData];
+				}
+				return [];
+			},
+			createSession: async (scopes) => {
+				try {
+					// Create a nonce for state validation
+					const nonce = crypto.randomBytes(16).toString('hex');
+					await context.secrets.store('tw-cline-stats-google-nonce', nonce);
+					
+					// Generate PKCE code verifier and challenge
+					const codeVerifier = generateCodeVerifier();
+					const codeChallenge = await generateCodeChallenge(codeVerifier);
+					
+					// Store the code verifier in secure storage for later use
+					await context.secrets.store('tw-cline-stats-google-verifier', codeVerifier);
+					
+					// Google OAuth configuration
+					const clientId = '457066567820-e0c86m2ao3j3lactebdlob9nel86t9vp.apps.googleusercontent.com';
+					// Use a redirect URI that is registered in the Google Cloud Console
+					const redirectUri = 'https://vscode.dev/redirect';
+					const scope = encodeURIComponent(scopes.join(' '));
+					
+					// Create the OAuth URL with PKCE parameters
+					const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&response_type=code&scope=${scope}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${nonce}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+					
+					// Open the browser for authentication
+					await vscode.env.openExternal(vscode.Uri.parse(authUrl));
+					
+					// Wait for the callback to be processed
+					return new Promise((resolve, reject) => {
+						// Store the promise callbacks in global state so they can be accessed by the URI handler
+						context.globalState.update('tw-cline-stats-google-resolve', (session: any) => {
+							resolve(session);
+						});
+						
+						context.globalState.update('tw-cline-stats-google-reject', (error: any) => {
+							reject(error);
+						});
+						
+						// Set a timeout to reject if no callback is received
+						const timeoutId = setTimeout(() => {
+							context.globalState.update('tw-cline-stats-google-resolve', undefined);
+							context.globalState.update('tw-cline-stats-google-reject', undefined);
+							context.globalState.update('tw-cline-stats-google-timeout-id', undefined);
+							reject(new Error('Authentication timed out'));
+						}, 5 * 60 * 1000); // 5 minutes
+						
+						// Store only the numeric ID of the timeout, not the Timeout object itself
+						context.globalState.update('tw-cline-stats-google-timeout-id', timeoutId[Symbol.toPrimitive]());
+					});
+				} catch (error) {
+					throw new Error(`Failed to create session: ${error.message}`);
+				}
+			},
+			removeSession: async (sessionId) => {
+				// Remove session from storage
+				await context.globalState.update('tw-cline-stats-google-sessions', undefined);
+				
+				// Notify session change
+				const session = {
+					id: sessionId,
+					accessToken: '',
+					account: { label: '', id: '' },
+					scopes: []
+				};
+				sessionChangeEmitter.fire({ added: [], removed: [session], changed: [] });
+			}
+		}
+	);
+	context.subscriptions.push(googleAuthProvider);
 
 	const sidebarWebview = new WebviewProvider(context, outputChannel)
 
@@ -183,6 +304,25 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.metricsButtonClicked", (webview: any) => {
+			WebviewProvider.getAllInstances().forEach((instance) => {
+				const openMetrics = async (instance?: WebviewProvider) => {
+					instance?.controller.postMessageToWebview({
+						type: "action",
+						action: "metricsButtonClicked",
+					})
+				}
+				const isSidebar = !webview
+				if (isSidebar) {
+					openMetrics(WebviewProvider.getSidebarInstance())
+				} else {
+					WebviewProvider.getTabInstances().forEach(openMetrics)
+				}
+			})
+		}),
+	)
+
 	/*
 	We use the text document content provider API to show the left side for diff view by creating a virtual document for the original content. This makes it readonly so users know to edit the right side if they want to keep their changes.
 
@@ -204,6 +344,12 @@ export function activate(context: vscode.ExtensionContext) {
 			query: uri.query,
 			scheme: uri.scheme,
 		})
+
+		// Special handling for vscode.dev/redirect URLs
+		if (uri.path === '/redirect' || uri.path === '/auth' || uri.path === '/stats-auth') {
+			// This is a redirect from an OAuth provider
+			console.log("Handling OAuth redirect");
+		}
 
 		const path = uri.path
 		const query = new URLSearchParams(uri.query.replace(/\+/g, "%2B"))
@@ -240,6 +386,146 @@ export function activate(context: vscode.ExtensionContext) {
 					await visibleWebview?.controller.handleAuthCallback(token, apiKey)
 				}
 				break
+			}
+			case "/redirect": {
+				// This is the redirect from Google OAuth
+				const code = query.get("code")
+				const state = query.get("state")
+
+				console.log("Google OAuth redirect received:", {
+					code: code ? "present" : "missing",
+					state: state ? "present" : "missing",
+				})
+
+				// Validate state parameter
+				const storedNonce = await context.secrets.get('tw-cline-stats-google-nonce');
+				if (!state || state !== storedNonce) {
+					console.error("Invalid state parameter");
+					
+					// Get the reject function from global state
+					const rejectFn = context.globalState.get('tw-cline-stats-google-reject');
+					if (typeof rejectFn === 'function') {
+						rejectFn(new Error('Invalid state parameter'));
+					}
+					
+					// Clear the timeout
+					const timeoutId = context.globalState.get<number>('tw-cline-stats-google-timeout-id');
+					if (timeoutId) {
+						clearTimeout(timeoutId);
+					}
+					
+					// Clear the callbacks
+					context.globalState.update('tw-cline-stats-google-resolve', undefined);
+					context.globalState.update('tw-cline-stats-google-reject', undefined);
+					context.globalState.update('tw-cline-stats-google-timeout-id', undefined);
+					
+					vscode.window.showErrorMessage("Invalid authentication state");
+					return;
+				}
+
+				if (code) {
+					try {
+						// Exchange the code for a token using PKCE
+						const clientId = "457066567820-e0c86m2ao3j3lactebdlob9nel86t9vp.apps.googleusercontent.com"
+						const redirectUri = "https://vscode.dev/redirect"
+						
+						// Retrieve the code verifier from secure storage
+						const codeVerifier = await context.secrets.get('tw-cline-stats-google-verifier');
+						if (!codeVerifier) {
+							throw new Error('Code verifier not found');
+						}
+						
+						// Make a request to Google's token endpoint with PKCE
+						const tokenResponse = await axios.post(
+							"https://oauth2.googleapis.com/token",
+							{
+								code,
+								client_id: clientId,
+								redirect_uri: redirectUri,
+								grant_type: "authorization_code",
+								code_verifier: codeVerifier
+							},
+							{
+								headers: {
+									"Content-Type": "application/json"
+								}
+							}
+						)
+						
+						const { access_token, id_token } = tokenResponse.data
+						
+						// Get user info from the ID token
+						const userInfoPart = id_token.split('.')[1]
+						const userInfoJson = Buffer.from(userInfoPart, 'base64').toString()
+						const userInfo = JSON.parse(userInfoJson)
+						
+						// Create session object
+						const session = {
+							id: `google-${userInfo.sub}`,
+							accessToken: access_token,
+							account: {
+								label: userInfo.email,
+								id: userInfo.sub
+							},
+							scopes: ['email', 'profile']
+						};
+						
+						// Store session
+						await context.globalState.update('tw-cline-stats-google-sessions', session);
+						
+						// Get the resolve function from global state
+						const resolveFn = context.globalState.get('tw-cline-stats-google-resolve');
+						if (typeof resolveFn === 'function') {
+							resolveFn(session);
+						}
+						
+						// Clear the timeout
+						const timeoutId = context.globalState.get<number>('tw-cline-stats-google-timeout-id');
+						if (timeoutId) {
+							clearTimeout(timeoutId);
+						}
+						
+						// Clear the callbacks
+						context.globalState.update('tw-cline-stats-google-resolve', undefined);
+						context.globalState.update('tw-cline-stats-google-reject', undefined);
+						context.globalState.update('tw-cline-stats-google-timeout-id', undefined);
+						
+						// Also update the metrics controller if available
+						const metricsController = visibleWebview?.controller.metricsController;
+						if (metricsController?.statsAuthService) {
+							const statsUserInfo = {
+								email: userInfo.email || null,
+								displayName: userInfo.name || null
+							};
+							
+							await metricsController.statsAuthService.handleAuthCallback(access_token, statsUserInfo);
+						}
+						
+						vscode.window.showInformationMessage("Successfully logged in to Statistics");
+					} catch (error) {
+						console.error("Error exchanging code for token:", error);
+						
+						// Get the reject function from global state
+						const rejectFn = context.globalState.get('tw-cline-stats-google-reject');
+						if (typeof rejectFn === 'function') {
+							rejectFn(error);
+						}
+						
+						// Clear the timeout
+						const timeoutId = context.globalState.get<number>('tw-cline-stats-google-timeout-id');
+						if (timeoutId) {
+							clearTimeout(timeoutId);
+						}
+						
+						// Clear the callbacks
+						context.globalState.update('tw-cline-stats-google-resolve', undefined);
+						context.globalState.update('tw-cline-stats-google-reject', undefined);
+						context.globalState.update('tw-cline-stats-google-timeout-id', undefined);
+						
+						vscode.window.showErrorMessage("Failed to complete Google authentication");
+					}
+				}
+				break;
 			}
 			default:
 				break
@@ -430,6 +716,26 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	// Register command to manually trigger token backfill
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.backfillTokenUsage", async () => {
+			vscode.window.withProgress(
+				{
+					location: vscode.ProgressLocation.Notification,
+					title: "Backfilling token usage data...",
+					cancellable: false
+				},
+				async (progress) => {
+					const tokenBackfillService = new TokenBackfillService(context)
+					const updatedCount = await tokenBackfillService.backfillAllTasks()
+					vscode.window.showInformationMessage(
+						`Token usage backfill complete. Updated ${updatedCount} tasks.`
+					)
+				}
+			)
+		})
+	)
+	
 	// Register the generateGitCommitMessage command handler
 	context.subscriptions.push(
 		vscode.commands.registerCommand("cline.generateGitCommitMessage", async () => {
@@ -448,6 +754,130 @@ export function activate(context: vscode.ExtensionContext) {
 				outputChannel.dispose()
 			}
 		}),
+	)
+	
+	// Register a command to handle the redirect URL
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.handleRedirect", async (uri: vscode.Uri) => {
+			// This command is called when the user is redirected from Google OAuth
+			console.log("Handling redirect URL:", uri.toString())
+			
+			// Extract the code and state from the query parameters
+			const query = new URLSearchParams(uri.query)
+			const code = query.get("code")
+			const state = query.get("state")
+			
+			if (code && state) {
+				// Validate the state parameter
+				const storedNonce = await context.secrets.get('tw-cline-stats-google-nonce')
+				if (state !== storedNonce) {
+					vscode.window.showErrorMessage("Invalid authentication state")
+					return
+				}
+				
+				try {
+					// Exchange the code for a token using PKCE
+					const clientId = "457066567820-e0c86m2ao3j3lactebdlob9nel86t9vp.apps.googleusercontent.com"
+					const redirectUri = "https://vscode.dev/redirect"
+					
+					// Retrieve the code verifier from secure storage
+					const codeVerifier = await context.secrets.get('tw-cline-stats-google-verifier');
+					if (!codeVerifier) {
+						throw new Error('Code verifier not found');
+					}
+					
+					// Make a request to Google's token endpoint with PKCE
+					const tokenResponse = await axios.post(
+						"https://oauth2.googleapis.com/token",
+						{
+							code,
+							client_id: clientId,
+							redirect_uri: redirectUri,
+							grant_type: "authorization_code",
+							code_verifier: codeVerifier
+						},
+						{
+							headers: {
+								"Content-Type": "application/json"
+							}
+						}
+					)
+					
+					const { access_token, id_token } = tokenResponse.data
+					
+					// Get user info from the ID token
+					const userInfoPart = id_token.split('.')[1]
+					const userInfoJson = Buffer.from(userInfoPart, 'base64').toString()
+					const userInfo = JSON.parse(userInfoJson)
+					
+					// Create session object
+					const session = {
+						id: `google-${userInfo.sub}`,
+						accessToken: access_token,
+						account: {
+							label: userInfo.email,
+							id: userInfo.sub
+						},
+						scopes: ['email', 'profile']
+					}
+					
+					// Store session
+					await context.globalState.update('tw-cline-stats-google-sessions', session)
+					
+					// Get the resolve function from global state
+					const resolveFn = context.globalState.get('tw-cline-stats-google-resolve')
+					if (typeof resolveFn === 'function') {
+						resolveFn(session)
+					}
+					
+					// Clear the timeout
+					const timeoutId = context.globalState.get<number>('tw-cline-stats-google-timeout-id')
+					if (timeoutId) {
+						clearTimeout(timeoutId)
+					}
+					
+					// Clear the callbacks
+					context.globalState.update('tw-cline-stats-google-resolve', undefined)
+					context.globalState.update('tw-cline-stats-google-reject', undefined)
+					context.globalState.update('tw-cline-stats-google-timeout-id', undefined)
+					
+					// Also update the metrics controller if available
+					const visibleWebview = WebviewProvider.getVisibleInstance()
+					const metricsController = visibleWebview?.controller.metricsController
+					if (metricsController?.statsAuthService) {
+						const statsUserInfo = {
+							email: userInfo.email || null,
+							displayName: userInfo.name || null
+						}
+						
+						await metricsController.statsAuthService.handleAuthCallback(access_token, statsUserInfo)
+					}
+					
+					vscode.window.showInformationMessage("Successfully logged in to Statistics")
+				} catch (error) {
+					console.error("Error exchanging code for token:", error)
+					
+					// Get the reject function from global state
+					const rejectFn = context.globalState.get('tw-cline-stats-google-reject')
+					if (typeof rejectFn === 'function') {
+						rejectFn(error)
+					}
+					
+					// Clear the timeout
+					const timeoutId = context.globalState.get<number>('tw-cline-stats-google-timeout-id')
+					if (timeoutId) {
+						clearTimeout(timeoutId)
+					}
+					
+					// Clear the callbacks
+					context.globalState.update('tw-cline-stats-google-resolve', undefined)
+					context.globalState.update('tw-cline-stats-google-reject', undefined)
+					context.globalState.update('tw-cline-stats-google-timeout-id', undefined)
+					
+					vscode.window.showErrorMessage("Failed to complete Google authentication")
+				}
+			}
+		})
 	)
 
 	// Register the diagnostic check for commit tracking
@@ -511,6 +941,13 @@ export async function deactivate() {
 
 	// Clean up test mode
 	cleanupTestMode()
+	
+	// Clean up stats auth service if it exists
+	const webviewProvider = WebviewProvider.getVisibleInstance();
+	if (webviewProvider?.controller?.metricsController?.statsAuthService) {
+		await webviewProvider.controller.metricsController.statsAuthService.dispose();
+	}
+	
 	await posthogClientProvider.shutdown()
 	Logger.log("Cline extension deactivated")
 }
