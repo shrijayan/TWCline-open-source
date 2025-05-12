@@ -775,6 +775,18 @@ export class Controller {
 				await this.fetchFileEditStatistics()
 				break
 			}
+			// Metrics-related messages
+			case "metricsButtonClicked": {
+				await this.postMessageToWebview({ type: "action", action: "metricsButtonClicked" })
+				break
+			}
+			case "refreshMetrics":
+			case "statsLoginClicked":
+			case "statsLogoutClicked":
+			case "statsAuthStateChanged": {
+				await this.metricsController.handleMetricsMessage(message)
+				break
+			}
 			// Add more switch case statements here as more webview message commands
 			// are created within the webview context (i.e. inside media/main.js)
 		}

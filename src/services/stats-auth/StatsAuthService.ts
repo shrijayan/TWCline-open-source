@@ -21,9 +21,8 @@ export class StatsAuthService {
     private static readonly STATS_AUTH_TOKEN_KEY = "statsAuthToken"
     private static readonly STATS_AUTH_NONCE_KEY = "statsAuthNonce"
     
-    // Base URL for the statistics API - to be configured later
-    // INTEGRATION NOTE: Update this URL when your statistics API is ready
-    private readonly baseUrl = "https://api.stats.example.com/v1"
+    // Base URL for the statistics API
+    private readonly baseUrl = "https://api.cline.bot/v1/stats"
     
     private postMessageToWebview: (message: ExtensionMessage) => Promise<void>
     private context: vscode.ExtensionContext

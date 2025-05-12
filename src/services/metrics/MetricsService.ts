@@ -1055,7 +1055,8 @@ export class MetricsService {
     // Get current timestamp
     const now = Date.now()
     
-    return {
+    // Create metrics object without file edit statistics
+    const metrics: MetricsData = {
       lastUpdated: now,
       timestamp: now,
       taskMetrics,
@@ -1063,6 +1064,32 @@ export class MetricsService {
       toolMetrics,
       modelMetrics
     }
+    
+    // Add file edit statistics asynchronously after returning
+    this.addFileEditStatisticsAsync(metrics)
+    
+    return metrics
+  }
+  
+  /**
+   * Add file edit statistics to metrics object asynchronously
+   */
+  private addFileEditStatisticsAsync(metrics: MetricsData): void {
+    // Get file edit statistics and add them to the metrics object
+    getGlobalState(this.context, "fileEditStatistics").then(fileEditStats => {
+      metrics.fileEditStatistics = fileEditStats || {
+        totalSuggestions: 0,
+        acceptedSuggestions: 0,
+        promptQuality: undefined
+      }
+      
+      // Update metrics in global state with file edit statistics
+      updateGlobalState(this.context, "metricsData", metrics).catch(error => {
+        console.error("Error updating metrics with file edit statistics:", error)
+      })
+    }).catch(error => {
+      console.error("Error getting file edit statistics:", error)
+    })
   }
   
   // Calculate task metrics

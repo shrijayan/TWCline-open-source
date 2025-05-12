@@ -786,6 +786,89 @@ const MetricsView = ({ onDone }: MetricsViewProps) => {
 
           <VSCodeDivider />
 
+          {/* File Edit Statistics Section */}
+          <div className="bg-[var(--vscode-editor-background)] p-4 rounded-md">
+            <h4 className="mb-3">File Edit Statistics</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-[var(--vscode-sideBar-background)] p-3 rounded-md">
+                <div className="text-sm text-[var(--vscode-descriptionForeground)]">Total Suggestions</div>
+                <div className="text-2xl font-bold">
+                  {metricsData.fileEditStatistics?.totalSuggestions || 0}
+                </div>
+              </div>
+              <div className="bg-[var(--vscode-sideBar-background)] p-3 rounded-md">
+                <div className="text-sm text-[var(--vscode-descriptionForeground)]">Accepted Suggestions</div>
+                <div className="text-2xl font-bold">
+                  {metricsData.fileEditStatistics?.acceptedSuggestions || 0}
+                </div>
+              </div>
+              <div className="bg-[var(--vscode-sideBar-background)] p-3 rounded-md">
+                <div className="text-sm text-[var(--vscode-descriptionForeground)]">Acceptance Rate</div>
+                <div className="text-2xl font-bold">
+                  {metricsData.fileEditStatistics?.totalSuggestions > 0 
+                    ? Math.round((metricsData.fileEditStatistics.acceptedSuggestions / metricsData.fileEditStatistics.totalSuggestions) * 100)
+                    : 0}%
+                </div>
+              </div>
+            </div>
+            {metricsData.fileEditStatistics?.promptQuality !== undefined && (
+              <div className="bg-[var(--vscode-sideBar-background)] p-3 rounded-md mt-2">
+                <div className="text-sm text-[var(--vscode-descriptionForeground)]">Prompt Quality Score</div>
+                <div className="text-2xl font-bold">
+                  {metricsData.fileEditStatistics.promptQuality}%
+                </div>
+                <div className="text-xs text-[var(--vscode-descriptionForeground)]">
+                  Based on analysis of your first prompts in new chats
+                </div>
+              </div>
+            )}
+          </div>
+
+          <VSCodeDivider />
+
+          {/* Code Commit Stats Section */}
+          <div className="bg-[var(--vscode-editor-background)] p-4 rounded-md">
+            <h4 className="mb-3">Code Commit Stats</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="bg-[var(--vscode-sideBar-background)] p-3 rounded-md">
+                <div className="text-sm text-[var(--vscode-descriptionForeground)]">Lines Written</div>
+                <div className="text-2xl font-bold">
+                  {metricsData.fileEditStatistics?.totalLinesWritten || 0}
+                </div>
+              </div>
+              <div className="bg-[var(--vscode-sideBar-background)] p-3 rounded-md">
+                <div className="text-sm text-[var(--vscode-descriptionForeground)]">Commit Ratio</div>
+                <div className="text-2xl font-bold">
+                  {metricsData.fileEditStatistics?.commitRatio || 0}%
+                </div>
+                <div className="text-xs text-[var(--vscode-descriptionForeground)]">
+                  {metricsData.fileEditStatistics?.totalLinesCommitted || 0} lines committed
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 flex justify-between items-center">
+              {metricsData.fileEditStatistics?.lastCheckTimestamp && (
+                <div className="text-xs text-[var(--vscode-descriptionForeground)]">
+                  Last checked: {new Date(metricsData.fileEditStatistics.lastCheckTimestamp).toLocaleString()}
+                </div>
+              )}
+              <VSCodeButton
+                appearance="secondary"
+                onClick={() => {
+                  postMessage({
+                    type: "checkGitCommits"
+                  });
+                  postMessage({
+                    type: "fetchFileEditStatistics"
+                  });
+                }}>
+                Check Now
+              </VSCodeButton>
+            </div>
+          </div>
+
+          <VSCodeDivider />
+
           {/* Leaderboard Section - Only visible when logged in */}
           {statsUser && (
             <>

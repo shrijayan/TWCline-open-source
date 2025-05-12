@@ -166,25 +166,27 @@ export class Task {
 	private didCompleteReadingStream = false
 	private didAutomaticallyRetryFailedApiRequest = false
 
-	constructor(
-		context: vscode.ExtensionContext,
-		mcpHub: McpHub,
-		workspaceTracker: WorkspaceTracker,
-		updateTaskHistory: (historyItem: HistoryItem) => Promise<HistoryItem[]>,
-		postStateToWebview: () => Promise<void>,
-		postMessageToWebview: (message: ExtensionMessage) => Promise<void>,
-		reinitExistingTaskFromId: (taskId: string) => Promise<void>,
-		cancelTask: () => Promise<void>,
-		apiConfiguration: ApiConfiguration,
-		autoApprovalSettings: AutoApprovalSettings,
-		browserSettings: BrowserSettings,
-		chatSettings: ChatSettings,
-		shellIntegrationTimeout: number,
-		customInstructions?: string,
-		task?: string,
-		images?: string[],
-		historyItem?: HistoryItem,
-	) {
+constructor(
+	context: vscode.ExtensionContext,
+	mcpHub: McpHub,
+	workspaceTracker: WorkspaceTracker,
+	updateTaskHistory: (historyItem: HistoryItem) => Promise<HistoryItem[]>,
+	postStateToWebview: () => Promise<void>,
+	postMessageToWebview: (message: ExtensionMessage) => Promise<void>,
+	reinitExistingTaskFromId: (taskId: string) => Promise<void>,
+	cancelTask: () => Promise<void>,
+	apiConfiguration: ApiConfiguration,
+	autoApprovalSettings: AutoApprovalSettings,
+	browserSettings: BrowserSettings,
+	chatSettings: ChatSettings,
+	shellIntegrationTimeout: number,
+	customInstructions?: string,
+	task?: string,
+	images?: string[],
+	historyItem?: HistoryItem,
+	customSystemPrompt?: string,
+	controllerRef?: any,
+) {
 		this.context = context
 		this.mcpHub = mcpHub
 		this.workspaceTracker = workspaceTracker
@@ -1722,6 +1724,8 @@ export class Task {
 							return `[${block.name}]`
 						case "new_rule":
 							return `[${block.name} for '${block.params.path}']`
+						default:
+							return `[${block.name}]`
 					}
 				}
 

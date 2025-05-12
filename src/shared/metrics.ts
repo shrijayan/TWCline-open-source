@@ -9,6 +9,7 @@ export interface MetricsData {
   toolMetrics: ToolMetrics;
   modelMetrics: ModelMetrics;
   systemInfo?: SystemInfo;
+  fileEditStatistics?: any;          // File edit statistics
 }
 
 export interface TaskMetrics {
