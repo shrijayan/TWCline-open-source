@@ -229,6 +229,23 @@ export class DiffViewProvider {
 		// Notify controller that a file edit has been accepted
 		vscode.commands.executeCommand("cline.fileEditAccepted")
 
+		// Count added lines for commit ratio tracking
+		try {
+			// Import the getAddedLines function dynamically to avoid circular dependencies
+			const { getAddedLines } = await import("../git/line-hash")
+
+			// Get lines added by Cline
+			const addedLines = getAddedLines(this.originalContent || "", preSaveContent)
+
+			// Record the lines written (if any)
+			if (addedLines.length > 0) {
+				vscode.commands.executeCommand("cline.recordLinesWritten", absolutePath, addedLines)
+			}
+		} catch (error) {
+			console.error("Error recording lines written:", error)
+			// Non-fatal error - don't block the save operation
+		}
+
 		// get text after save in case there is any auto-formatting done by the editor
 		const postSaveContent = updatedDocument.getText()
 
