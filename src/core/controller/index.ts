@@ -21,6 +21,8 @@ import { ClineAccountService } from "@services/account/ClineAccountService"
 import { BrowserSession } from "@services/browser/BrowserSession"
 import { McpHub } from "@services/mcp/McpHub"
 import { THOUGHTWORKS_SYSTEM_PROMPT } from "../prompts/custom/thoughtworks"
+import { MetricsController } from "@services/metrics/MetricsController"
+import { searchWorkspaceFiles } from "@services/search/file-search"
 import { telemetryService } from "@/services/posthog/telemetry/TelemetryService"
 import { GitCommitChecker } from "@integrations/git/GitCommitChecker"
 import { recordLinesWritten } from "@integrations/git/LineTracker"
@@ -72,6 +74,7 @@ export class Controller {
 	mcpHub: McpHub
 	accountService: ClineAccountService
 	gitCommitChecker: GitCommitChecker
+	public metricsController: MetricsController
 	private latestAnnouncementId = "may-09-2025_17:11:00" // update to some unique identifier when we add a new announcement
 
 	constructor(
@@ -108,6 +111,8 @@ export class Controller {
 			}),
 		)
 
+		this.metricsController = new MetricsController(this.context, (msg) => this.postMessage(msg))
+
 		// Clean up legacy checkpoints
 		cleanupLegacyCheckpoints(this.context.globalStorageUri.fsPath, this.outputChannel).catch((error) => {
 			console.error("Failed to cleanup legacy checkpoints:", error)
@@ -138,6 +143,7 @@ export class Controller {
 		this.workspaceTracker.dispose()
 		this.mcpHub.dispose()
 		this.gitCommitChecker.dispose()
+		this.metricsController.dispose()
 		this.outputChannel.appendLine("Disposed all disposables")
 
 		console.error("Controller disposed")

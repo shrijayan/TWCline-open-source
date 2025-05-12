@@ -44,6 +44,12 @@
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
+		"authentication": [
+			{
+				"id": "tw-cline-stats-google",
+				"label": "Cline Statistics"
+			}
+		],
 		"viewsContainers": {
 			"activitybar": [
 				{
@@ -87,6 +93,11 @@
 				"command": "cline.accountButtonClicked",
 				"title": "Account",
 				"icon": "$(account)"
+			},
+			{
+				"command": "cline.metricsButtonClicked",
+				"title": "Metrics",
+				"icon": "$(graph)"
 			},
 			{
 				"command": "cline.settingsButtonClicked",
@@ -137,7 +148,11 @@
 			},
 			{
 				"command": "cline.generateGitCommitMessage",
-				"when": "scmProvider == git"
+				"title": "Cline: Generate Git Commit Message"
+			},
+			{
+				"command": "cline.backfillTokenUsage",
+				"title": "Cline: Backfill Token Usage"
 			}
 		],
 		"menus": {
@@ -165,6 +180,11 @@
 				{
 					"command": "cline.accountButtonClicked",
 					"group": "navigation@5",
+					"when": "view == claude-dev.SidebarProvider"
+				},
+				{
+					"command": "cline.metricsButtonClicked",
+					"group": "navigation@6",
 					"when": "view == claude-dev.SidebarProvider"
 				},
 				{
@@ -197,6 +217,11 @@
 				{
 					"command": "cline.accountButtonClicked",
 					"group": "navigation@5",
+					"when": "activeWebviewPanelId == claude-dev.TabPanelProvider"
+				},
+				{
+					"command": "cline.metricsButtonClicked",
+					"group": "navigation@6",
 					"when": "activeWebviewPanelId == claude-dev.TabPanelProvider"
 				},
 				{

@@ -47,6 +47,11 @@ export interface ExtensionMessage {
 		| "setActiveQuote"
 		| "sendWithCustomPrompt" // New type for sending with custom prompt
 		| "fileEditStatistics"
+		| "metricsData" // For metrics panel
+		| "metricsLoading" // For metrics loading state
+		| "statsAuthStateChanged" // For statistics authentication
+		| "statsAuthCallback" // For statistics authentication callback
+		| "refreshMetrics" // For refreshing metrics data
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -57,6 +62,7 @@ export interface ExtensionMessage {
 		| "accountLogoutClicked"
 		| "accountButtonClicked"
 		| "focusChatInput"
+		| "metricsButtonClicked"
 	invoke?: Invoke
 	state?: ExtensionState
 	images?: string[]
@@ -112,6 +118,15 @@ export interface ExtensionMessage {
 		totalSuggestions: number
 		acceptedSuggestions: number
 	}
+	metricsData?: any // Metrics data for the metrics panel
+	isLoading?: boolean // Loading state for metrics
+	statsUserInfo?: {
+		displayName: string | null
+		email: string | null
+	} // User info for statistics authentication
+	// For metrics refresh
+	dateRange?: "7d" | "30d" | "all"
+	forceRecalculate?: boolean
 }
 
 export type Invoke = "sendMessage" | "primaryButtonClick" | "secondaryButtonClick"
