@@ -56,7 +56,6 @@ export interface WebviewMessage {
 		| "taskFeedback"
 		| "scrollToSettings"
 		| "searchFiles"
-		| "toggleFavoriteModel"
 		| "grpc_request"
 		| "grpc_request_cancel"
 		| "toggleClineRule"
