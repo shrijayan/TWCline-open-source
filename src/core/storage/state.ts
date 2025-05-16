@@ -76,6 +76,7 @@ async function migrateEnableCheckpointsSetting(enableCheckpointsSettingRaw: bool
 
 export async function getAllExtensionState(context: vscode.ExtensionContext) {
 	const [
+		isNewUser,
 		storedApiProvider,
 		apiModelId,
 		apiKey,
@@ -163,6 +164,7 @@ export async function getAllExtensionState(context: vscode.ExtensionContext) {
 		enableCheckpointsSettingRaw,
 		mcpMarketplaceEnabledRaw,
 	] = await Promise.all([
+		getGlobalState(context, "isNewUser") as Promise<boolean | undefined>,
 		getGlobalState(context, "apiProvider") as Promise<ApiProvider | undefined>,
 		getGlobalState(context, "apiModelId") as Promise<string | undefined>,
 		getSecret(context, "apiKey") as Promise<string | undefined>,
@@ -358,6 +360,7 @@ export async function getAllExtensionState(context: vscode.ExtensionContext) {
 			favoritedModelIds,
 			requestTimeoutMs,
 		},
+		isNewUser: isNewUser ?? true,
 		lastShownAnnouncementId,
 		customInstructions,
 		taskHistory,
