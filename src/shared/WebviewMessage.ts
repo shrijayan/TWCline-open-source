@@ -15,7 +15,6 @@ export interface WebviewMessage {
 		| "sendWithCustomPrompt"
 		| "condense"
 		| "reportBug"
-		| "askResponse"
 		| "didShowAnnouncement"
 		| "resetState"
 		| "openInBrowser"
@@ -72,7 +71,6 @@ export interface WebviewMessage {
 	text?: string
 	message?: string
 	disabled?: boolean
-	askResponse?: ClineAskResponse
 	apiConfiguration?: ApiConfiguration
 	images?: string[]
 	bool?: boolean
