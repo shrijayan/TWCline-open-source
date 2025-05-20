@@ -21,7 +21,6 @@ export interface WebviewMessage {
 		| "showChatView"
 		| "refreshClineRules"
 		| "openMcpSettings"
-		| "deleteMcpServer"
 		| "autoApprovalSettings"
 		| "browserRelaunchResult"
 		| "checkGitCommits"
