@@ -42,7 +42,6 @@ export interface WebviewMessage {
 		| "fetchUserCreditsData"
 		| "optionsResponse"
 		| "requestTotalTasksSize"
-		| "relaunchChromeDebugMode"
 		| "searchFiles"
 		| "grpc_request"
 		| "grpc_request_cancel"
@@ -54,7 +53,6 @@ export interface WebviewMessage {
 		| "fileEditAccepted"
 		| "fileEditRejected"
 
-	// | "relaunchChromeDebugMode"
 	text?: string
 	message?: string
 	disabled?: boolean
