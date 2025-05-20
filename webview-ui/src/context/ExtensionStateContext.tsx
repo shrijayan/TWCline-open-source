@@ -52,6 +52,8 @@ interface ExtensionStateContextType extends ExtensionState {
 	setShellIntegrationTimeout: (value: number) => void
 	setChatSettings: (value: ChatSettings) => void
 	setMcpServers: (value: McpServer[]) => void
+	setGlobalClineRulesToggles: (toggles: Record<string, boolean>) => void
+	setLocalClineRulesToggles: (toggles: Record<string, boolean>) => void
 
 	// Navigation state setters
 	setShowMcp: (value: boolean) => void
@@ -531,6 +533,16 @@ export const ExtensionStateContextProvider: React.FC<{
 				mcpMarketplaceEnabled: state.mcpMarketplaceEnabled,
 			})
 		},
+		setGlobalClineRulesToggles: (toggles) =>
+			setState((prevState) => ({
+				...prevState,
+				globalClineRulesToggles: toggles,
+			})),
+		setLocalClineRulesToggles: (toggles) =>
+			setState((prevState) => ({
+				...prevState,
+				localClineRulesToggles: toggles,
+			})),
 		setMcpTab,
 	}
 
