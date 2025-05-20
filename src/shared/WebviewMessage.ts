@@ -27,7 +27,6 @@ export interface WebviewMessage {
 		| "togglePlanActMode"
 		| "openExtensionSettings"
 		| "requestVsCodeLmModels"
-		| "toggleToolAutoApprove"
 		| "showAccountViewClicked"
 		| "authStateChanged"
 		| "authCallback"
