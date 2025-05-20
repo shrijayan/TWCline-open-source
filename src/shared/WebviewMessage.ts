@@ -47,7 +47,6 @@ export interface WebviewMessage {
 		| "searchFiles"
 		| "grpc_request"
 		| "grpc_request_cancel"
-		| "toggleCursorRule"
 		| "toggleWindsurfRule"
 		| "toggleWorkflow"
 		| "updateTerminalConnectionTimeout"
