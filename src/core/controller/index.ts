@@ -37,7 +37,6 @@ import { fileExistsAtPath } from "@utils/fs"
 import { getWorkingState } from "@utils/git"
 import { extractCommitMessage } from "@integrations/git/commit-message-generator"
 import { getTotalTasksSize } from "@utils/storage"
-import { openMention } from "../mentions"
 import { ensureMcpServersDirectoryExists, ensureSettingsDirectoryExists, GlobalFileNames } from "../storage/disk"
 import {
 	getAllExtensionState,
@@ -406,9 +405,6 @@ export class Controller {
 				if (message.url) {
 					vscode.env.openExternal(vscode.Uri.parse(message.url))
 				}
-				break
-			case "openMention":
-				openMention(message.text)
 				break
 			case "showAccountViewClicked": {
 				await this.postMessageToWebview({ type: "action", action: "accountButtonClicked" })
