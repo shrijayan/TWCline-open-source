@@ -24,6 +24,7 @@ export interface WebviewMessage {
 		| "browserRelaunchResult"
 		| "checkGitCommits"
 		| "togglePlanActMode"
+		| "togglePlanActMode"
 		| "openExtensionSettings"
 		| "requestVsCodeLmModels"
 		| "showAccountViewClicked"
