@@ -71,7 +71,7 @@ export class Controller {
 	mcpHub: McpHub
 	accountService: ClineAccountService
 	gitCommitChecker: GitCommitChecker
-	latestAnnouncementId = "may-16-2025_16:11:00" // update to some unique identifier when we add a new announcement
+	latestAnnouncementId = "may-22-2025_16:11:00" // update to some unique identifier when we add a new announcement
 
 	constructor(
 		readonly context: vscode.ExtensionContext,
