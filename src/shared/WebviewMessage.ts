@@ -14,7 +14,6 @@ export interface WebviewMessage {
 		| "sendWithCustomPrompt"
 		| "condense"
 		| "reportBug"
-		| "didShowAnnouncement"
 		| "openInBrowser"
 		| "showChatView"
 		| "openMcpSettings"

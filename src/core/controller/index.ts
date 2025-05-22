@@ -71,7 +71,7 @@ export class Controller {
 	mcpHub: McpHub
 	accountService: ClineAccountService
 	gitCommitChecker: GitCommitChecker
-	private latestAnnouncementId = "may-16-2025_16:11:00" // update to some unique identifier when we add a new announcement
+	latestAnnouncementId = "may-16-2025_16:11:00" // update to some unique identifier when we add a new announcement
 
 	constructor(
 		readonly context: vscode.ExtensionContext,
@@ -376,10 +376,6 @@ export class Controller {
 					invoke: "sendMessage",
 					text: message.text,
 				})
-				break
-			case "didShowAnnouncement":
-				await updateGlobalState(this.context, "lastShownAnnouncementId", this.latestAnnouncementId)
-				await this.postStateToWebview()
 				break
 			case "openInBrowser":
 				if (message.url) {
