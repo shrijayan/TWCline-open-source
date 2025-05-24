@@ -24,7 +24,6 @@ export interface WebviewMessage {
 		| "togglePlanActMode"
 		| "openExtensionSettings"
 		| "requestVsCodeLmModels"
-		| "showAccountViewClicked"
 		| "authStateChanged"
 		| "authCallback"
 		| "fetchMcpMarketplace"
