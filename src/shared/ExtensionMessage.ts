@@ -148,7 +148,7 @@ export interface ExtensionState {
 		photoURL: string | null
 	}
 	version: string
-	vscMachineId: string
+	distinctId: string
 	globalClineRulesToggles: ClineRulesToggles
 	localClineRulesToggles: ClineRulesToggles
 	localWorkflowToggles: ClineRulesToggles

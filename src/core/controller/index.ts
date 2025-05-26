@@ -333,13 +333,6 @@ export class Controller {
 						}
 					}
 				})
-
-				// If user already opted in to telemetry, enable telemetry service
-				this.getStateToPostToWebview().then((state) => {
-					const { telemetrySetting } = state
-					const isOptedIn = telemetrySetting !== "disabled"
-					telemetryService.updateTelemetryState(isOptedIn)
-				})
 				break
 			case "showChatView": {
 				this.postMessageToWebview({
@@ -920,6 +913,7 @@ export class Controller {
 			const response = await axios.get("https://api.cline.bot/v1/mcp/marketplace", {
 				headers: {
 					"Content-Type": "application/json",
+					"User-Agent": "cline-vscode-extension",
 				},
 			})
 
@@ -1397,7 +1391,7 @@ export class Controller {
 			telemetrySetting,
 			planActSeparateModelsSetting,
 			enableCheckpointsSetting: enableCheckpointsSetting ?? true,
-			vscMachineId: vscode.env.machineId,
+			distinctId: telemetryService.distinctId,
 			globalClineRulesToggles: globalClineRulesToggles || {},
 			localClineRulesToggles: localClineRulesToggles || {},
 			localWindsurfRulesToggles: localWindsurfRulesToggles || {},
