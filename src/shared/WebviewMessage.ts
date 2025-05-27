@@ -41,6 +41,7 @@ export interface WebviewMessage {
 		| "fetchFileEditStatistics"
 		| "fileEditAccepted"
 		| "fileEditRejected"
+		| "executeQuickWin"
 
 	text?: string
 	message?: string
@@ -89,6 +90,8 @@ export interface WebviewMessage {
 	workflowPath?: string
 	enabled?: boolean
 	filename?: string
+
+	payload?: { command: string; title: string }
 
 	offset?: number
 	shellIntegrationTimeout?: number

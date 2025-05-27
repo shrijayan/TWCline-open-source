@@ -545,6 +545,13 @@ export class Controller {
 				}
 				break
 			}
+			case "executeQuickWin":
+				if (message.payload) {
+					const { command, title } = message.payload
+					this.outputChannel.appendLine(`Received executeQuickWin: command='${command}', title='${title}'`)
+					await this.initTask(title)
+				}
+				break
 
 			case "updateTerminalConnectionTimeout": {
 				if (message.shellIntegrationTimeout !== undefined) {
