@@ -24,7 +24,6 @@ export interface WebviewMessage {
 		| "openExtensionSettings"
 		| "requestVsCodeLmModels"
 		| "authStateChanged"
-		| "authCallback"
 		| "fetchMcpMarketplace"
 		| "searchCommits"
 		| "fetchLatestMcpServersFromHub"
