@@ -54,6 +54,7 @@ export interface ExtensionMessage {
 		| "focusChatInput"
 	state?: ExtensionState
 	images?: string[]
+	files?: string[]
 	ollamaModels?: string[]
 	lmStudioModels?: string[]
 	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
@@ -158,6 +159,7 @@ export interface ClineMessage {
 	text?: string
 	reasoning?: string
 	images?: string[]
+	files?: string[]
 	partial?: boolean
 	lastCheckpointHash?: string
 	isCheckpointCheckedOut?: boolean
