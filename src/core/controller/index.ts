@@ -134,7 +134,6 @@ export class Controller {
 		})
 
 		await this.clearTask()
-		this.outputChannel.appendLine("Cleared task")
 		while (this.disposables.length) {
 			const x = this.disposables.pop()
 			if (x) {
