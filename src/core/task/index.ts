@@ -2436,7 +2436,7 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("ask", "tool")
 									await this.say("tool", completeMessage, undefined, undefined, false)
 									this.consecutiveAutoApprovedRequestsCount++
-									telemetryService.captureToolUsage(this.taskId, block.name, true, true)
+									telemetryService.captureToolUsage(this.taskId, block.name, this.api.getModel().id, true, true)
 
 									// we need an artificial delay to let the diagnostics catch up to the changes
 									await setTimeoutPromise(3_500)
@@ -2474,7 +2474,13 @@ export class Task {
 										}
 										this.didRejectTool = true
 										didApprove = false
-										telemetryService.captureToolUsage(this.taskId, block.name, false, false)
+										telemetryService.captureToolUsage(
+											this.taskId,
+											block.name,
+											this.api.getModel().id,
+											false,
+											false,
+										)
 									} else {
 										// User hit the approve button, and may have provided feedback
 										if (text || (images && images.length > 0) || (askFiles && askFiles.length > 0)) {
@@ -2487,7 +2493,13 @@ export class Task {
 											await this.say("user_feedback", text, images, askFiles)
 											await this.saveCheckpoint()
 										}
-										telemetryService.captureToolUsage(this.taskId, block.name, false, true)
+										telemetryService.captureToolUsage(
+											this.taskId,
+											block.name,
+											this.api.getModel().id,
+											false,
+											true,
+										)
 									}
 
 									if (!didApprove) {
@@ -2605,7 +2617,7 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("ask", "tool")
 									await this.say("tool", completeMessage, undefined, undefined, false) // need to be sending partialValue bool, since undefined has its own purpose in that the message is treated neither as a partial or completion of a partial, but as a single complete message
 									this.consecutiveAutoApprovedRequestsCount++
-									telemetryService.captureToolUsage(this.taskId, block.name, true, true)
+									telemetryService.captureToolUsage(this.taskId, block.name, this.api.getModel().id, true, true)
 								} else {
 									showNotificationForApprovalIfAutoApprovalEnabled(
 										`Cline wants to read ${path.basename(absolutePath)}`,
@@ -2614,10 +2626,22 @@ export class Task {
 									const didApprove = await askApproval("tool", completeMessage)
 									if (!didApprove) {
 										await this.saveCheckpoint()
-										telemetryService.captureToolUsage(this.taskId, block.name, false, false)
+										telemetryService.captureToolUsage(
+											this.taskId,
+											block.name,
+											this.api.getModel().id,
+											false,
+											false,
+										)
 										break
 									}
-									telemetryService.captureToolUsage(this.taskId, block.name, false, true)
+									telemetryService.captureToolUsage(
+										this.taskId,
+										block.name,
+										this.api.getModel().id,
+										false,
+										true,
+									)
 								}
 								// now execute the tool like normal
 								const content = await extractTextFromFile(absolutePath)
@@ -2690,7 +2714,7 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("ask", "tool")
 									await this.say("tool", completeMessage, undefined, undefined, false)
 									this.consecutiveAutoApprovedRequestsCount++
-									telemetryService.captureToolUsage(this.taskId, block.name, true, true)
+									telemetryService.captureToolUsage(this.taskId, block.name, this.api.getModel().id, true, true)
 								} else {
 									showNotificationForApprovalIfAutoApprovalEnabled(
 										`Cline wants to view directory ${path.basename(absolutePath)}/`,
@@ -2698,11 +2722,23 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("say", "tool")
 									const didApprove = await askApproval("tool", completeMessage)
 									if (!didApprove) {
-										telemetryService.captureToolUsage(this.taskId, block.name, false, false)
+										telemetryService.captureToolUsage(
+											this.taskId,
+											block.name,
+											this.api.getModel().id,
+											false,
+											false,
+										)
 										await this.saveCheckpoint()
 										break
 									}
-									telemetryService.captureToolUsage(this.taskId, block.name, false, true)
+									telemetryService.captureToolUsage(
+										this.taskId,
+										block.name,
+										this.api.getModel().id,
+										false,
+										true,
+									)
 								}
 								pushToolResult(result, isClaude4ModelFamily)
 								await this.saveCheckpoint()
@@ -2760,7 +2796,7 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("ask", "tool")
 									await this.say("tool", completeMessage, undefined, undefined, false)
 									this.consecutiveAutoApprovedRequestsCount++
-									telemetryService.captureToolUsage(this.taskId, block.name, true, true)
+									telemetryService.captureToolUsage(this.taskId, block.name, this.api.getModel().id, true, true)
 								} else {
 									showNotificationForApprovalIfAutoApprovalEnabled(
 										`Cline wants to view source code definitions in ${path.basename(absolutePath)}/`,
@@ -2768,11 +2804,23 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("say", "tool")
 									const didApprove = await askApproval("tool", completeMessage)
 									if (!didApprove) {
-										telemetryService.captureToolUsage(this.taskId, block.name, false, false)
+										telemetryService.captureToolUsage(
+											this.taskId,
+											block.name,
+											this.api.getModel().id,
+											false,
+											false,
+										)
 										await this.saveCheckpoint()
 										break
 									}
-									telemetryService.captureToolUsage(this.taskId, block.name, false, true)
+									telemetryService.captureToolUsage(
+										this.taskId,
+										block.name,
+										this.api.getModel().id,
+										false,
+										true,
+									)
 								}
 								pushToolResult(result)
 								await this.saveCheckpoint()
@@ -2849,7 +2897,7 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("ask", "tool")
 									await this.say("tool", completeMessage, undefined, undefined, false)
 									this.consecutiveAutoApprovedRequestsCount++
-									telemetryService.captureToolUsage(this.taskId, block.name, true, true)
+									telemetryService.captureToolUsage(this.taskId, block.name, this.api.getModel().id, true, true)
 								} else {
 									showNotificationForApprovalIfAutoApprovalEnabled(
 										`Cline wants to search files in ${path.basename(absolutePath)}/`,
@@ -2857,11 +2905,23 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("say", "tool")
 									const didApprove = await askApproval("tool", completeMessage)
 									if (!didApprove) {
-										telemetryService.captureToolUsage(this.taskId, block.name, false, false)
+										telemetryService.captureToolUsage(
+											this.taskId,
+											block.name,
+											this.api.getModel().id,
+											false,
+											false,
+										)
 										await this.saveCheckpoint()
 										break
 									}
-									telemetryService.captureToolUsage(this.taskId, block.name, false, true)
+									telemetryService.captureToolUsage(
+										this.taskId,
+										block.name,
+										this.api.getModel().id,
+										false,
+										true,
+									)
 								}
 								pushToolResult(results, isClaude4ModelFamily)
 								await this.saveCheckpoint()
@@ -3766,20 +3826,38 @@ export class Task {
 									this.removeLastPartialMessageIfExistsWithType("ask", "tool")
 									await this.say("tool", completeMessage, undefined, undefined, false)
 									this.consecutiveAutoApprovedRequestsCount++
-									telemetryService.captureToolUsage(this.taskId, "web_fetch" as ToolUseName, true, true)
+									telemetryService.captureToolUsage(
+										this.taskId,
+										"web_fetch" as ToolUseName,
+										this.api.getModel().id,
+										true,
+										true,
+									)
 								} else {
 									showNotificationForApprovalIfAutoApprovalEnabled(`Cline wants to fetch content from ${url}`)
 									this.removeLastPartialMessageIfExistsWithType("say", "tool")
 									const didApprove = await askApproval("tool", completeMessage)
 									if (!didApprove) {
-										telemetryService.captureToolUsage(this.taskId, "web_fetch" as ToolUseName, false, false)
+										telemetryService.captureToolUsage(
+											this.taskId,
+											"web_fetch" as ToolUseName,
+											this.api.getModel().id,
+											false,
+											false,
+										)
 										await this.saveCheckpoint()
 										break
 									}
-									telemetryService.captureToolUsage(this.taskId, "web_fetch" as ToolUseName, false, true)
+									telemetryService.captureToolUsage(
+										this.taskId,
+										"web_fetch" as ToolUseName,
+										this.api.getModel().id,
+										false,
+										true,
+									)
 								}
 
-								// Fetch Markdown content
+								// Fetch Markdown contentcc
 								await this.urlContentFetcher.launchBrowser()
 								const markdownContent = await this.urlContentFetcher.urlToMarkdown(url)
 								await this.urlContentFetcher.closeBrowser()
