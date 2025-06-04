@@ -41,7 +41,7 @@ export interface ExtensionMessage {
 		| "sendWithCustomPrompt" // New type for sending with custom prompt
 		| "fileEditStatistics"
 	text?: string
-	action?: "settingsButtonClicked" | "didBecomeVisible" | "accountLogoutClicked" | "accountButtonClicked" | "focusChatInput"
+	action?: "settingsButtonClicked" | "didBecomeVisible" | "accountLogoutClicked" | "focusChatInput"
 	state?: ExtensionState
 	images?: string[]
 	files?: string[]
