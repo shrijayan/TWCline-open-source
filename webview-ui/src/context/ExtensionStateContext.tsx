@@ -458,6 +458,41 @@ export const ExtensionStateContextProvider: React.FC<{
 			},
 		})
 
+		// Subscribe to MCP marketplace catalog updates
+		mcpMarketplaceUnsubscribeRef.current = McpServiceClient.subscribeToMcpMarketplaceCatalog(EmptyRequest.create({}), {
+			onResponse: (catalog) => {
+				console.log("[DEBUG] Received MCP marketplace catalog update from gRPC stream")
+				setMcpMarketplaceCatalog(catalog)
+			},
+			onError: (error) => {
+				console.error("Error in MCP marketplace catalog subscription:", error)
+			},
+			onComplete: () => {
+				console.log("MCP marketplace catalog subscription completed")
+			},
+		})
+
+		// Subscribe to theme changes
+		themeSubscriptionRef.current = UiServiceClient.subscribeToTheme(EmptyRequest.create({}), {
+			onResponse: (response) => {
+				if (response.value) {
+					try {
+						const themeData = JSON.parse(response.value)
+						setTheme(convertTextMateToHljs(themeData))
+						console.log("[DEBUG] Received theme update from gRPC stream")
+					} catch (error) {
+						console.error("Error parsing theme data:", error)
+					}
+				}
+			},
+			onError: (error) => {
+				console.error("Error in theme subscription:", error)
+			},
+			onComplete: () => {
+				console.log("Theme subscription completed")
+			},
+		})
+
 		// Still send the webviewDidLaunch message for other initialization
 		vscode.postMessage({ type: "webviewDidLaunch" })
 
@@ -505,6 +540,14 @@ export const ExtensionStateContextProvider: React.FC<{
 			if (partialMessageUnsubscribeRef.current) {
 				partialMessageUnsubscribeRef.current()
 				partialMessageUnsubscribeRef.current = null
+			}
+			if (mcpMarketplaceUnsubscribeRef.current) {
+				mcpMarketplaceUnsubscribeRef.current()
+				mcpMarketplaceUnsubscribeRef.current = null
+			}
+			if (themeSubscriptionRef.current) {
+				themeSubscriptionRef.current()
+				themeSubscriptionRef.current = null
 			}
 		}
 	}, [])
