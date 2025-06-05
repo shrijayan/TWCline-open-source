@@ -177,6 +177,7 @@ export class Controller {
 			browserSettings,
 			chatSettings,
 			shellIntegrationTimeout,
+			terminalReuseEnabled,
 			enableCheckpointsSetting,
 			isNewUser,
 			taskHistory,
@@ -211,6 +212,7 @@ export class Controller {
 			browserSettings,
 			chatSettings,
 			shellIntegrationTimeout,
+			terminalReuseEnabled ?? true,
 			enableCheckpointsSetting ?? true,
 			customInstructions,
 			task,
@@ -505,6 +507,15 @@ export class Controller {
 					if (this.task) {
 						this.task.chatSettings = message.chatSettings
 					}
+				}
+
+				// terminal settings
+				if (typeof message.shellIntegrationTimeout === "number") {
+					await updateGlobalState(this.context, "shellIntegrationTimeout", message.shellIntegrationTimeout)
+				}
+
+				if (typeof message.terminalReuseEnabled === "boolean") {
+					await updateGlobalState(this.context, "terminalReuseEnabled", message.terminalReuseEnabled)
 				}
 
 				// after settings are updated, post state to webview
@@ -1307,6 +1318,7 @@ export class Controller {
 			globalClineRulesToggles,
 			globalWorkflowToggles,
 			shellIntegrationTimeout,
+			terminalReuseEnabled,
 			isNewUser,
 		} = await getAllExtensionState(this.context)
 
@@ -1351,6 +1363,7 @@ export class Controller {
 			localWorkflowToggles: localWorkflowToggles || {},
 			globalWorkflowToggles: globalWorkflowToggles || {},
 			shellIntegrationTimeout,
+			terminalReuseEnabled,
 			isNewUser,
 		}
 	}
