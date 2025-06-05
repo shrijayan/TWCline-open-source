@@ -1,7 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import axios from "axios"
 import { v4 as uuidv4 } from "uuid"
-
 import fs from "fs/promises"
 import { setTimeout as setTimeoutPromise } from "node:timers/promises"
 import pWaitFor from "p-wait-for"
@@ -13,12 +12,8 @@ import { EmptyRequest } from "@shared/proto/common"
 import { buildApiHandler } from "@api/index"
 import { cleanupLegacyCheckpoints } from "@integrations/checkpoints/CheckpointMigration"
 import { downloadTask } from "@integrations/misc/export-markdown"
-import { fetchOpenGraphData } from "@integrations/misc/link-preview"
-import { handleFileServiceRequest } from "./file"
-import { getTheme } from "@integrations/theme/getTheme"
 import WorkspaceTracker from "@integrations/workspace/WorkspaceTracker"
 import { ClineAccountService } from "@services/account/ClineAccountService"
-import { BrowserSession } from "@services/browser/BrowserSession"
 import { McpHub } from "@services/mcp/McpHub"
 import { THOUGHTWORKS_SYSTEM_PROMPT } from "../prompts/custom/thoughtworks"
 import { telemetryService } from "@/services/posthog/telemetry/TelemetryService"
@@ -30,41 +25,32 @@ import { ChatContent } from "@shared/ChatContent"
 import { ChatSettings } from "@shared/ChatSettings"
 import { ExtensionMessage, ExtensionState, Platform } from "@shared/ExtensionMessage"
 import { HistoryItem } from "@shared/HistoryItem"
-import { McpDownloadResponse, McpMarketplaceCatalog, McpServer } from "@shared/mcp"
+import { McpMarketplaceCatalog } from "@shared/mcp"
 import { FileEditStatistics } from "@shared/Statistics"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
 import { WebviewMessage } from "@shared/WebviewMessage"
 import { fileExistsAtPath } from "@utils/fs"
 import { getWorkingState } from "@utils/git"
 import { extractCommitMessage } from "@integrations/git/commit-message-generator"
-import { getTotalTasksSize } from "@utils/storage"
-import {
-	ensureMcpServersDirectoryExists,
-	ensureSettingsDirectoryExists,
-	GlobalFileNames,
-	ensureWorkflowsDirectoryExists,
-} from "../storage/disk"
+import { ensureMcpServersDirectoryExists, ensureSettingsDirectoryExists, GlobalFileNames } from "../storage/disk"
 import {
 	getAllExtensionState,
 	getGlobalState,
 	getSecret,
 	getWorkspaceState,
-	resetExtensionState,
 	storeSecret,
 	updateApiConfiguration,
 	updateGlobalState,
 	updateWorkspaceState,
 } from "../storage/state"
-import { Task, cwd } from "../task"
+import { Task } from "../task"
 import { ClineRulesToggles } from "@shared/cline-rules"
 import { sendStateUpdate } from "./state/subscribeToState"
 import { sendAddToInputEvent } from "./ui/subscribeToAddToInput"
 import { sendAuthCallbackEvent } from "./account/subscribeToAuthCallback"
-import { sendChatButtonClickedEvent } from "./ui/subscribeToChatButtonClicked"
 import { sendMcpMarketplaceCatalogEvent } from "./mcp/subscribeToMcpMarketplaceCatalog"
-import { refreshClineRulesToggles } from "@core/context/instructions/user-instructions/cline-rules"
-import { refreshExternalRulesToggles } from "@core/context/instructions/user-instructions/external-rules"
-import { refreshWorkflowToggles } from "@core/context/instructions/user-instructions/workflows"
+import { sendOpenRouterModelsEvent } from "./models/subscribeToOpenRouterModels"
+import { OpenRouterCompatibleModelInfo } from "@/shared/proto/models"
 
 /*
 https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -81,7 +67,6 @@ export class Controller {
 	workspaceTracker: WorkspaceTracker
 	mcpHub: McpHub
 	accountService: ClineAccountService
-	gitCommitChecker: GitCommitChecker
 	latestAnnouncementId = "may-22-2025_16:11:00" // update to some unique identifier when we add a new announcement
 
 	constructor(
@@ -107,17 +92,6 @@ export class Controller {
 			},
 		)
 
-		// Initialize GitCommitChecker
-		this.gitCommitChecker = new GitCommitChecker(this.context)
-		this.gitCommitChecker.startPeriodicChecks(true) // Run immediate check on startup
-
-		// Register command for recording lines written
-		this.disposables.push(
-			vscode.commands.registerCommand("cline.recordLinesWritten", (filePath: string, lines: string[]) => {
-				recordLinesWritten(this.context, filePath, lines).catch((e) => console.error("Error recording lines written:", e))
-			}),
-		)
-
 		// Clean up legacy checkpoints
 		cleanupLegacyCheckpoints(this.context.globalStorageUri.fsPath, this.outputChannel).catch((error) => {
 			console.error("Failed to cleanup legacy checkpoints:", error)
@@ -130,13 +104,6 @@ export class Controller {
 	- https://github.com/microsoft/vscode-extension-samples/blob/main/webview-sample/src/extension.ts
 	*/
 	async dispose() {
-		this.outputChannel.appendLine("Disposing ClineProvider...")
-
-		// Run one final git commit check before disposing
-		await this.gitCommitChecker.finalCheck().catch((e) => {
-			console.error("Error in final git commit check:", e)
-		})
-
 		await this.clearTask()
 		while (this.disposables.length) {
 			const x = this.disposables.pop()
@@ -146,8 +113,6 @@ export class Controller {
 		}
 		this.workspaceTracker.dispose()
 		this.mcpHub.dispose()
-		this.gitCommitChecker.dispose()
-		this.outputChannel.appendLine("Disposed all disposables")
 
 		console.error("Controller disposed")
 	}
@@ -220,54 +185,6 @@ export class Controller {
 			images,
 			files,
 			historyItem,
-			undefined, // customSystemPrompt parameter
-			this, // Pass controller instance
-		)
-	}
-
-	async initTaskWithCustomPrompt(task?: string, images?: string[]) {
-		await this.clearTask()
-		const {
-			apiConfiguration,
-			customInstructions,
-			autoApprovalSettings,
-			browserSettings,
-			chatSettings,
-			shellIntegrationTimeout,
-		} = await getAllExtensionState(this.context)
-
-		if (autoApprovalSettings) {
-			const updatedAutoApprovalSettings = {
-				...autoApprovalSettings,
-				version: (autoApprovalSettings.version ?? 1) + 1,
-			}
-			await updateGlobalState(this.context, "autoApprovalSettings", updatedAutoApprovalSettings)
-		}
-
-		// Get the custom system prompt for TWSend from the thoughtworks prompt file
-		const modelSupportsBrowserUse = true // Default to true for TWSend
-		const customSystemPrompt = await THOUGHTWORKS_SYSTEM_PROMPT(cwd, modelSupportsBrowserUse, this.mcpHub, browserSettings)
-
-		this.task = new Task(
-			this.context,
-			this.mcpHub,
-			this.workspaceTracker,
-			(historyItem) => this.updateTaskHistory(historyItem),
-			() => this.postStateToWebview(),
-			(message) => this.postMessageToWebview(message),
-			(taskId) => this.reinitExistingTaskFromId(taskId),
-			() => this.cancelTask(),
-			apiConfiguration,
-			autoApprovalSettings,
-			browserSettings,
-			chatSettings,
-			shellIntegrationTimeout,
-			customInstructions,
-			task,
-			images,
-			undefined,
-			customSystemPrompt,
-			this, // Pass controller instance
 		)
 	}
 
@@ -351,13 +268,6 @@ export class Controller {
 				// initializing new instance of Cline will make sure that any agentically running promises in old instance don't affect our new task. this essentially creates a fresh slate for the new task
 				await this.initTask(message.text, message.images, message.files)
 				break
-			case "sendWithCustomPrompt":
-				// Handle the TWSend button click - send with custom system prompt
-				await this.initTaskWithCustomPrompt(message.message, message.images, message.files)
-				break
-			case "condense":
-				this.task?.handleWebviewAskResponse("yesButtonClicked")
-				break
 			case "apiConfiguration":
 				if (message.apiConfiguration) {
 					await updateApiConfiguration(this.context, message.apiConfiguration)
@@ -375,31 +285,6 @@ export class Controller {
 				await this.fetchMcpMarketplace(message.bool)
 				break
 			}
-			case "silentlyRefreshMcpMarketplace": {
-				await this.silentlyRefreshMcpMarketplace()
-				break
-			}
-			case "checkGitCommits": {
-				// Manually trigger a git commit check with force parameter
-				if (this.gitCommitChecker) {
-					console.log("Controller: Manually triggering git commit check with force=true")
-					await this.gitCommitChecker.checkGitCommits(true)
-
-					// Also run the diagnostic script to collect additional information
-					try {
-						console.log("Controller: Running git commit diagnosis")
-						await runGitCommitCheckDiagnosis(this.context)
-					} catch (diagError) {
-						console.error("Error during git commit diagnosis:", diagError)
-					}
-				}
-				break
-			}
-			case "taskFeedback":
-				if (message.feedbackType && this.task?.taskId) {
-					telemetryService.captureTaskFeedback(this.task.taskId, message.feedbackType)
-				}
-				break
 			// case "openMcpMarketplaceServerDetails": {
 			// 	if (message.text) {
 			// 		const response = await fetch(`https://api.cline.bot/v1/mcp/marketplace/item?mcpId=${message.mcpId}`)
@@ -555,29 +440,6 @@ export class Controller {
 				}
 				break
 
-			case "updateTerminalConnectionTimeout": {
-				if (message.shellIntegrationTimeout !== undefined) {
-					const timeout = message.shellIntegrationTimeout
-
-					if (typeof timeout === "number" && !isNaN(timeout) && timeout > 0) {
-						await updateGlobalState(this.context, "shellIntegrationTimeout", timeout)
-						await this.postStateToWebview()
-					} else {
-						console.warn(
-							`Invalid shell integration timeout value received: ${timeout}. ` + `Expected a positive number.`,
-						)
-					}
-				}
-				break
-			}
-			case "fileEditAccepted": {
-				await this.incrementAcceptedFileEdits()
-				break
-			}
-			case "fetchFileEditStatistics": {
-				await this.fetchFileEditStatistics()
-				break
-			}
 			// Add more switch case statements here as more webview message commands
 			// are created within the webview context (i.e. inside media/main.js)
 		}
@@ -763,28 +625,21 @@ export class Controller {
 			} catch (error) {
 				console.error("Failed to abort task", error)
 			}
-
-			// Wait for the task to finish aborting with increased timeout
 			await pWaitFor(
 				() =>
 					this.task === undefined ||
 					this.task.isStreaming === false ||
 					this.task.didFinishAbortingStream ||
-					this.task.isWaitingForFirstChunk, // if only first chunk is processed, then there's no need to wait for graceful abort
+					this.task.isWaitingForFirstChunk, // if only first chunk is processed, then there's no need to wait for graceful abort (closes edits, browser, etc)
 				{
-					timeout: 8_000, // Increased from 3_000 to give more time for abortion to complete
+					timeout: 3_000,
 				},
 			).catch(() => {
-				console.error("Failed to abort task within timeout, forcing termination")
+				console.error("Failed to abort task")
 			})
-
-			// Force task termination regardless of whether pWaitFor succeeded or failed
 			if (this.task) {
-				// Mark as abandoned to prevent this instance from affecting future GUI operations
+				// 'abandoned' will prevent this cline instance from affecting future cline instance gui. this may happen if its hanging on a streaming request
 				this.task.abandoned = true
-
-				// We can't directly access private properties, so rely on the abortTask method
-				// which already includes browser and diff view cleanup
 			}
 			await this.initTask(undefined, undefined, undefined, historyItem) // clears task again, so we need to abortTask manually above
 			// await this.postStateToWebview() // new Cline instance will post state when it's ready. having this here sent an empty messages array to webview leading to virtuoso having to reload the entire list
@@ -1519,218 +1374,4 @@ Commit message:`
 	}
 
 	// dev
-
-	async resetState() {
-		vscode.window.showInformationMessage("Resetting state...")
-		await resetExtensionState(this.context)
-		if (this.task) {
-			this.task.abortTask()
-			this.task = undefined
-		}
-		vscode.window.showInformationMessage("State reset")
-		await this.postStateToWebview()
-		await this.postMessageToWebview({
-			type: "action",
-			action: "chatButtonClicked",
-		})
-	}
-
-	// File Edit Statistics
-
-	/**
-	 * Record that a file edit suggestion has been presented to the user
-	 */
-	async recordFileEditPresented() {
-		console.log("Recording file edit presented")
-		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
-			totalSuggestions: number
-			acceptedSuggestions: number
-		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
-
-		stats.totalSuggestions += 1
-
-		await updateGlobalState(this.context, "fileEditStatistics", stats)
-		console.log("Updated file edit statistics after presentation:", stats)
-
-		// Send updated statistics to the webview
-		await this.postMessageToWebview({
-			type: "fileEditStatistics",
-			fileEditStatistics: stats,
-		})
-	}
-
-	/**
-	 * Record that a file edit suggestion has been accepted by the user
-	 */
-	async incrementAcceptedFileEdits() {
-		console.log("Recording file edit accepted")
-		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
-			totalSuggestions: number
-			acceptedSuggestions: number
-		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
-
-		// Only increment the accepted counter since the total was already incremented when presented
-		stats.acceptedSuggestions += 1
-
-		await updateGlobalState(this.context, "fileEditStatistics", stats)
-		console.log("Updated file edit statistics after acceptance:", stats)
-
-		// Send updated statistics to the webview
-		await this.postMessageToWebview({
-			type: "fileEditStatistics",
-			fileEditStatistics: stats,
-		})
-	}
-
-	/**
-	 * Record that a file edit suggestion has been rejected by the user
-	 */
-	async recordFileEditRejected() {
-		console.log("Recording file edit rejected")
-		// We don't need to increment any counters here, since the total was already
-		// incremented when the edit was presented, and we don't increment acceptedSuggestions
-
-		// Just fetch and send the current stats to update the UI
-		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as {
-			totalSuggestions: number
-			acceptedSuggestions: number
-		}) || { totalSuggestions: 0, acceptedSuggestions: 0 }
-
-		console.log("Current file edit statistics after rejection:", stats)
-
-		// Send updated statistics to the webview
-		await this.postMessageToWebview({
-			type: "fileEditStatistics",
-			fileEditStatistics: stats,
-		})
-	}
-
-	/**
-	 * Send the current file edit statistics to the webview
-	 */
-	async fetchFileEditStatistics() {
-		console.log("Fetching file edit statistics...")
-		const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as FileEditStatistics) || {
-			totalSuggestions: 0,
-			acceptedSuggestions: 0,
-			promptQuality: undefined,
-		}
-
-		console.log("Retrieved file edit statistics:", stats)
-
-		await this.postMessageToWebview({
-			type: "fileEditStatistics",
-			fileEditStatistics: stats,
-		})
-
-		console.log("Sent file edit statistics to webview")
-		return stats
-	}
-
-	/**
-	 * Evaluate the quality of a user's first prompt in a new chat
-	 * @param prompt The user's first prompt in a new chat session
-	 */
-	async evaluatePromptQuality(prompt: string) {
-		console.log("Evaluating prompt quality for first message in new chat...")
-
-		try {
-			// Get the current API configuration
-			const { apiConfiguration } = await getAllExtensionState(this.context)
-
-			// Build the API handler
-			const apiHandler = buildApiHandler(apiConfiguration)
-
-			// Create the evaluation prompt
-			const systemPrompt =
-				"You are an AI assistant that evaluates the quality of user prompts for coding tasks. Your job is to analyze the prompt and assign a score from 0 to 100, where higher scores indicate better prompts.\n\nEvaluation criteria:\n- Clarity: Is the request clear and unambiguous?\n- Specificity: Does it provide enough details to understand what's needed?\n- Context: Does it provide necessary context for the task?\n- Structure: Is the task well-structured and broken down appropriately?\n- Feasibility: Is the request feasible to implement?\n- Technical accuracy: Does it use correct technical terminology?\n\nProvide your evaluation as a score from 0 to 100, where:\n- 0-20: Very poor quality prompt with minimal information\n- 21-40: Poor quality prompt lacking essential details\n- 41-60: Average quality prompt with basic information\n- 61-80: Good quality prompt with substantial information\n- 81-100: Excellent quality prompt with comprehensive information and context\n\nBe more generous in scoring if the user breaks down the task clearly rather than lumping everything into one large prompt."
-			const evaluationPrompt = `The user prompt is given below, now evaluate the quality of the user prompt from 0 to 100.\n\n${prompt}\n\nFinal score (0-100):`
-
-			// Create a message for the API
-			const messages = [
-				{
-					role: "user" as const,
-					content: evaluationPrompt,
-				},
-			]
-
-			// Call the API
-			const stream = apiHandler.createMessage(systemPrompt, messages)
-
-			// Collect the response
-			let response = ""
-			for await (const chunk of stream) {
-				if (chunk.type === "text") {
-					response += chunk.text
-				}
-			}
-
-			// Extract the score - look for a number between 0-100
-			// First try to find a number after the prompt "Final score: " or similar pattern
-			let scoreMatch = response.match(/(?:final\s+score|score|rating)(?:\s*:\s*|\s+is\s+|\s+of\s+)(\d{1,3})/i)
-
-			// If that didn't work, try to find any number between 0-100
-			if (!scoreMatch) {
-				scoreMatch = response.match(/\b([0-9]|[1-9][0-9]|100)\b/)
-			}
-
-			let score: number | undefined = undefined
-
-			if (scoreMatch) {
-				// Use group 1 if it exists (from the first pattern match), otherwise use group 0
-				const extractedScore = scoreMatch[1] || scoreMatch[0]
-				score = parseInt(extractedScore, 10)
-
-				// Validate score is in range 0-100
-				if (score < 0 || score > 100) {
-					console.error(`Invalid score range: ${score}, clamping to 0-100`)
-					score = Math.max(0, Math.min(100, score))
-				}
-
-				console.log(`Prompt quality score: ${score}`)
-
-				// Retrieve current statistics
-				const stats = ((await getGlobalState(this.context, "fileEditStatistics")) as FileEditStatistics) || {
-					totalSuggestions: 0,
-					acceptedSuggestions: 0,
-					promptQuality: undefined,
-				}
-
-				// Calculate the new rolling average - weight the existing average more heavily
-				let newQualityScore: number
-				if (stats.promptQuality === undefined) {
-					// First time calculation
-					newQualityScore = score
-				} else {
-					// Calculate weighted rolling average: (3 * previous_score + new_score) / 4
-					// This gives 75% weight to the historical average and 25% to the new score
-					newQualityScore = Math.round((3 * stats.promptQuality + score) / 4)
-				}
-
-				console.log(
-					`Previous prompt quality: ${stats.promptQuality}, New quality: ${score}, Rolling average: ${newQualityScore}`,
-				)
-
-				// Update the prompt quality score with the rolling average
-				stats.promptQuality = newQualityScore
-
-				// Save updated statistics
-				await updateGlobalState(this.context, "fileEditStatistics", stats as FileEditStatistics)
-
-				// Send updated statistics to webview
-				await this.postMessageToWebview({
-					type: "fileEditStatistics",
-					fileEditStatistics: stats,
-				})
-
-				return score
-			} else {
-				console.error("Failed to extract prompt quality score from response:", response)
-				return undefined
-			}
-		} catch (error) {
-			console.error("Error evaluating prompt quality:", error)
-			return undefined
-		}
-	}
 }
