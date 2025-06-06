@@ -27,7 +27,6 @@ export interface WebviewMessage {
 		| "searchCommits"
 		| "fetchLatestMcpServersFromHub"
 		| "telemetrySetting"
-		| "updateSettings"
 		| "clearAllTaskHistory"
 		| "fetchUserCreditsData"
 		| "grpc_request"
