@@ -91,6 +91,7 @@ export type GlobalStateKey =
 	| "favoritedModelIds"
 	| "requestTimeoutMs"
 	| "shellIntegrationTimeout"
+	| "mcpResponsesCollapsed"
 	| "fileEditStatistics"
 	| "lineTracker"
 	| "terminalReuseEnabled"

@@ -54,6 +54,7 @@ interface ExtensionStateContextType extends ExtensionState {
 	setPlanActSeparateModelsSetting: (value: boolean) => void
 	setEnableCheckpointsSetting: (value: boolean) => void
 	setMcpMarketplaceEnabled: (value: boolean) => void
+	setMcpResponsesCollapsed: (value: boolean) => void
 	setShellIntegrationTimeout: (value: number) => void
 	setTerminalReuseEnabled: (value: boolean) => void
 	setChatSettings: (value: ChatSettings) => void
@@ -181,6 +182,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		shellIntegrationTimeout: 4000, // default timeout for shell integration
 		terminalReuseEnabled: true, // default to enabled for backward compatibility
 		isNewUser: false,
+		mcpResponsesCollapsed: false, // Default value (expanded), will be overwritten by extension state
 	})
 	const [didHydrateState, setDidHydrateState] = useState(false)
 	const [showWelcome, setShowWelcome] = useState(false)
@@ -656,6 +658,12 @@ export const ExtensionStateContextProvider: React.FC<{
 				...prevState,
 				mcpMarketplaceEnabled: value,
 			})),
+		setMcpResponsesCollapsed: (value) => {
+			setState((prevState) => ({
+				...prevState,
+				mcpResponsesCollapsed: value,
+			}))
+		},
 		setShowAnnouncement,
 		setShouldShowAnnouncement: (value) =>
 			setState((prevState) => ({
@@ -690,6 +698,7 @@ export const ExtensionStateContextProvider: React.FC<{
 				planActSeparateModelsSetting: state.planActSeparateModelsSetting,
 				enableCheckpointsSetting: state.enableCheckpointsSetting,
 				mcpMarketplaceEnabled: state.mcpMarketplaceEnabled,
+				mcpResponsesCollapsed: state.mcpResponsesCollapsed,
 			})
 		},
 		setGlobalClineRulesToggles: (toggles) =>
