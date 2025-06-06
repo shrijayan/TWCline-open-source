@@ -17,21 +17,15 @@ export interface ExtensionMessage {
 		| "action"
 		| "state"
 		| "selectedImages"
-		| "ollamaModels"
-		| "lmStudioModels"
 		| "workspaceUpdated"
-		| "openAiModels"
 		| "requestyModels"
 		| "mcpServers"
 		| "relinquishControl"
 		| "mcpDownloadDetails"
-		| "commitSearchResults"
-		| "openGraphData"
 		| "didUpdateSettings"
 		| "userCreditsBalance"
 		| "userCreditsUsage"
 		| "userCreditsPayments"
-		| "fileSearchResults"
 		| "grpc_response" // New type for gRPC responses
 		| "setActiveQuote"
 		| "sendWithCustomPrompt" // New type for sending with custom prompt
@@ -53,14 +47,6 @@ export interface ExtensionMessage {
 	error?: string
 	mcpDownloadDetails?: McpDownloadResponse
 	commits?: GitCommit[]
-	openGraphData?: {
-		title?: string
-		description?: string
-		image?: string
-		url?: string
-		siteName?: string
-		type?: string
-	}
 	url?: string
 	isImage?: boolean
 	userCreditsBalance?: BalanceResponse

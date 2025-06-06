@@ -7,8 +7,6 @@ import pWaitFor from "p-wait-for"
 import * as path from "path"
 import * as vscode from "vscode"
 import { handleGrpcRequest, handleGrpcRequestCancel } from "./grpc-handler"
-import { handleModelsServiceRequest } from "./models"
-import { EmptyRequest } from "@shared/proto/common"
 import { buildApiHandler } from "@api/index"
 import { cleanupLegacyCheckpoints } from "@integrations/checkpoints/CheckpointMigration"
 import { downloadTask } from "@integrations/misc/export-markdown"
@@ -49,8 +47,6 @@ import { sendStateUpdate } from "./state/subscribeToState"
 import { sendAddToInputEvent } from "./ui/subscribeToAddToInput"
 import { sendAuthCallbackEvent } from "./account/subscribeToAuthCallback"
 import { sendMcpMarketplaceCatalogEvent } from "./mcp/subscribeToMcpMarketplaceCatalog"
-import { sendOpenRouterModelsEvent } from "./models/subscribeToOpenRouterModels"
-import { OpenRouterCompatibleModelInfo } from "@/shared/proto/models"
 
 /*
 https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
