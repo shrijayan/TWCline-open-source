@@ -95,6 +95,9 @@ interface ExtensionStateContextType extends ExtensionState {
 	hideAccount: () => void
 	hideAnnouncement: () => void
 	closeMcpView: () => void
+
+	// Event callbacks
+	onRelinquishControl: (callback: () => void) => () => void
 }
 
 const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -286,6 +289,18 @@ export const ExtensionStateContextProvider: React.FC<{
 	const themeSubscriptionRef = useRef<(() => void) | null>(null)
 	const openRouterModelsUnsubscribeRef = useRef<(() => void) | null>(null)
 	const workspaceUpdatesUnsubscribeRef = useRef<(() => void) | null>(null)
+	const relinquishControlUnsubscribeRef = useRef<(() => void) | null>(null)
+
+	// Add ref for callbacks
+	const relinquishControlCallbacks = useRef<Set<() => void>>(new Set())
+
+	// Create hook function
+	const onRelinquishControl = useCallback((callback: () => void) => {
+		relinquishControlCallbacks.current.add(callback)
+		return () => {
+			relinquishControlCallbacks.current.delete(callback)
+		}
+	}, [])
 
 	// Subscribe to state updates and UI events using the gRPC streaming API
 	useEffect(() => {
@@ -561,6 +576,18 @@ export const ExtensionStateContextProvider: React.FC<{
 			},
 		})
 
+		// Subscribe to relinquish control events
+		relinquishControlUnsubscribeRef.current = UiServiceClient.subscribeToRelinquishControl(EmptyRequest.create({}), {
+			onResponse: () => {
+				// Call all registered callbacks
+				relinquishControlCallbacks.current.forEach((callback) => callback())
+			},
+			onError: (error) => {
+				console.error("Error in relinquishControl subscription:", error)
+			},
+			onComplete: () => {},
+		})
+
 		// Clean up subscriptions when component unmounts
 		return () => {
 			if (stateSubscriptionRef.current) {
@@ -606,6 +633,10 @@ export const ExtensionStateContextProvider: React.FC<{
 			if (workspaceUpdatesUnsubscribeRef.current) {
 				workspaceUpdatesUnsubscribeRef.current()
 				workspaceUpdatesUnsubscribeRef.current = null
+			}
+			if (relinquishControlUnsubscribeRef.current) {
+				relinquishControlUnsubscribeRef.current()
+				relinquishControlUnsubscribeRef.current = null
 			}
 		}
 	}, [])
@@ -782,6 +813,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		setMcpTab,
 		setTotalTasksSize,
 		refreshOpenRouterModels,
+		onRelinquishControl,
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>
