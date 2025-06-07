@@ -1,5 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useEvent } from "react-use"
+import {
+	StateServiceClient,
+	ModelsServiceClient,
+	UiServiceClient,
+	FileServiceClient,
+	McpServiceClient,
+} from "../services/grpc-client"
 import { EmptyRequest } from "@shared/proto/common"
 import { UpdateSettingsRequest } from "@shared/proto/state"
 import { WebviewProviderType as WebviewProviderTypeEnum, WebviewProviderTypeRequest } from "@shared/proto/ui"
@@ -21,7 +28,6 @@ import {
 	requestyDefaultModelInfo,
 } from "../../../src/shared/api"
 import { McpMarketplaceCatalog, McpServer, McpViewTab } from "../../../src/shared/mcp"
-import { ModelsServiceClient, StateServiceClient, UiServiceClient, McpServiceClient } from "../services/grpc-client"
 import { convertTextMateToHljs } from "../utils/textMateToHljs"
 import { vscode } from "../utils/vscode"
 import { OpenRouterCompatibleModelInfo } from "@shared/proto/models"
@@ -279,6 +285,7 @@ export const ExtensionStateContextProvider: React.FC<{
 	const mcpMarketplaceUnsubscribeRef = useRef<(() => void) | null>(null)
 	const themeSubscriptionRef = useRef<(() => void) | null>(null)
 	const openRouterModelsUnsubscribeRef = useRef<(() => void) | null>(null)
+	const workspaceUpdatesUnsubscribeRef = useRef<(() => void) | null>(null)
 
 	// Subscribe to state updates and UI events using the gRPC streaming API
 	useEffect(() => {
@@ -408,6 +415,18 @@ export const ExtensionStateContextProvider: React.FC<{
 			onComplete: () => {},
 		})
 
+		// Subscribe to workspace file updates
+		workspaceUpdatesUnsubscribeRef.current = FileServiceClient.subscribeToWorkspaceUpdates(EmptyRequest.create({}), {
+			onResponse: (response) => {
+				console.log("[DEBUG] Received workspace update event from gRPC stream")
+				setFilePaths(response.values || [])
+			},
+			onError: (error) => {
+				console.error("Error in workspace updates subscription:", error)
+			},
+			onComplete: () => {},
+		})
+
 		// Set up settings button clicked subscription
 		settingsButtonClickedSubscriptionRef.current = UiServiceClient.subscribeToSettingsButtonClicked(
 			WebviewProviderTypeRequest.create({
@@ -518,6 +537,14 @@ export const ExtensionStateContextProvider: React.FC<{
 
 		// Still send the webviewDidLaunch message for other initialization
 		vscode.postMessage({ type: "webviewDidLaunch" })
+		// Initialize webview using gRPC
+		UiServiceClient.initializeWebview(EmptyRequest.create({}))
+			.then(() => {
+				console.log("[DEBUG] Webview initialization completed via gRPC")
+			})
+			.catch((error) => {
+				console.error("Failed to initialize webview via gRPC:", error)
+			})
 
 		// Set up account button clicked subscription
 		accountButtonClickedSubscriptionRef.current = UiServiceClient.subscribeToAccountButtonClicked(EmptyRequest.create(), {
@@ -575,6 +602,10 @@ export const ExtensionStateContextProvider: React.FC<{
 			if (openRouterModelsUnsubscribeRef.current) {
 				openRouterModelsUnsubscribeRef.current()
 				openRouterModelsUnsubscribeRef.current = null
+			}
+			if (workspaceUpdatesUnsubscribeRef.current) {
+				workspaceUpdatesUnsubscribeRef.current()
+				workspaceUpdatesUnsubscribeRef.current = null
 			}
 		}
 	}, [])
