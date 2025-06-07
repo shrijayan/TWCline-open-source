@@ -28,6 +28,7 @@ import {
 	requestyDefaultModelInfo,
 } from "../../../src/shared/api"
 import { McpMarketplaceCatalog, McpServer, McpViewTab } from "../../../src/shared/mcp"
+import { convertProtoMcpServersToMcpServers } from "@shared/proto-conversions/mcp/mcp-server-conversion"
 import { convertTextMateToHljs } from "../utils/textMateToHljs"
 import { vscode } from "../utils/vscode"
 import { OpenRouterCompatibleModelInfo } from "@shared/proto/models"
@@ -252,10 +253,6 @@ export const ExtensionStateContextProvider: React.FC<{
 				})
 				break
 			}
-			case "mcpServers": {
-				setMcpServers(message.mcpServers ?? [])
-				break
-			}
 			case "mcpMarketplaceCatalog": {
 				if (message.mcpMarketplaceCatalog) {
 					setMcpMarketplaceCatalog(message.mcpMarketplaceCatalog)
@@ -301,6 +298,7 @@ export const ExtensionStateContextProvider: React.FC<{
 			relinquishControlCallbacks.current.delete(callback)
 		}
 	}, [])
+	const mcpServersSubscriptionRef = useRef<(() => void) | null>(null)
 
 	// Subscribe to state updates and UI events using the gRPC streaming API
 	useEffect(() => {
@@ -428,6 +426,22 @@ export const ExtensionStateContextProvider: React.FC<{
 				console.error("Error in chat button subscription:", error)
 			},
 			onComplete: () => {},
+		})
+
+		// Subscribe to MCP servers updates
+		mcpServersSubscriptionRef.current = McpServiceClient.subscribeToMcpServers(EmptyRequest.create(), {
+			onResponse: (response) => {
+				console.log("[DEBUG] Received MCP servers update from gRPC stream")
+				if (response.mcpServers) {
+					setMcpServers(convertProtoMcpServersToMcpServers(response.mcpServers))
+				}
+			},
+			onError: (error) => {
+				console.error("Error in MCP servers subscription:", error)
+			},
+			onComplete: () => {
+				console.log("MCP servers subscription completed")
+			},
 		})
 
 		// Subscribe to workspace file updates
@@ -637,6 +651,11 @@ export const ExtensionStateContextProvider: React.FC<{
 			if (relinquishControlUnsubscribeRef.current) {
 				relinquishControlUnsubscribeRef.current()
 				relinquishControlUnsubscribeRef.current = null
+			}
+
+			if (mcpServersSubscriptionRef.current) {
+				mcpServersSubscriptionRef.current()
+				mcpServersSubscriptionRef.current = null
 			}
 		}
 	}, [])
