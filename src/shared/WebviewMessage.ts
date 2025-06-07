@@ -11,8 +11,6 @@ export interface WebviewMessage {
 		| "apiConfiguration"
 		| "newTask"
 		| "sendWithCustomPrompt"
-		| "condense"
-		| "reportBug"
 		| "showChatView"
 		| "openMcpSettings"
 		| "autoApprovalSettings"
