@@ -87,8 +87,6 @@ export interface WebviewMessage {
 	enabled?: boolean
 	filename?: string
 
-	payload?: { command: string; title: string }
-
 	offset?: number
 	shellIntegrationTimeout?: number
 	terminalReuseEnabled?: boolean
