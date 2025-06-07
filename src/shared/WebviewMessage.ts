@@ -23,7 +23,6 @@ export interface WebviewMessage {
 		| "authStateChanged"
 		| "fetchMcpMarketplace"
 		| "searchCommits"
-		| "fetchLatestMcpServersFromHub"
 		| "telemetrySetting"
 		| "clearAllTaskHistory"
 		| "fetchUserCreditsData"
