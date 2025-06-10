@@ -25,6 +25,7 @@ import { WebviewProviderType as WebviewProviderTypeEnum } from "@shared/proto/ui
 import { WebviewProviderType } from "./shared/webview/types"
 import { sendHistoryButtonClickedEvent } from "./core/controller/ui/subscribeToHistoryButtonClicked"
 import { sendAccountButtonClickedEvent } from "./core/controller/ui/subscribeToAccountButtonClicked"
+import { migratePlanActGlobalToWorkspaceStorage } from "./core/storage/state"
 
 /*
 Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -46,6 +47,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	ErrorService.initialize()
 	Logger.initialize(outputChannel)
 	Logger.log("Cline extension activated")
+
+	// Migrate global storage values to workspace storage (one-time cleanup)
+	await migratePlanActGlobalToWorkspaceStorage(context)
 
 	// Version checking for autoupdate notification
 	const currentVersion = context.extension.packageJSON.version
