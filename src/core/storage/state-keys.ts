@@ -69,6 +69,7 @@ export type GlobalStateKey =
 	| "fileEditStatistics"
 	| "lineTracker"
 	| "terminalReuseEnabled"
+	| "defaultTerminalProfile"
 	| "isNewUser"
 
 export type LocalStateKey =

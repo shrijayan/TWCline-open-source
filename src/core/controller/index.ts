@@ -140,6 +140,7 @@ export class Controller {
 			chatSettings,
 			shellIntegrationTimeout,
 			terminalReuseEnabled,
+			defaultTerminalProfile,
 			enableCheckpointsSetting,
 			isNewUser,
 			taskHistory,
@@ -175,6 +176,7 @@ export class Controller {
 			chatSettings,
 			shellIntegrationTimeout,
 			terminalReuseEnabled ?? true,
+			defaultTerminalProfile ?? "default",
 			enableCheckpointsSetting ?? true,
 			task,
 			images,
@@ -281,6 +283,7 @@ export class Controller {
 				await this.postStateToWebview()
 				break
 			}
+
 			case "clearAllTaskHistory": {
 				const answer = await vscode.window.showWarningMessage(
 					"What would you like to delete?",
@@ -1013,6 +1016,7 @@ export class Controller {
 			globalWorkflowToggles,
 			shellIntegrationTimeout,
 			terminalReuseEnabled,
+			defaultTerminalProfile,
 			isNewUser,
 			mcpResponsesCollapsed,
 		} = await getAllExtensionState(this.context)
@@ -1058,6 +1062,7 @@ export class Controller {
 			globalWorkflowToggles: globalWorkflowToggles || {},
 			shellIntegrationTimeout,
 			terminalReuseEnabled,
+			defaultTerminalProfile,
 			isNewUser,
 			mcpResponsesCollapsed,
 		}
