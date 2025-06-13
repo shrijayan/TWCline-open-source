@@ -71,6 +71,7 @@ export type GlobalStateKey =
 	| "terminalReuseEnabled"
 	| "defaultTerminalProfile"
 	| "isNewUser"
+	| "mcpRichDisplayEnabled"
 
 export type LocalStateKey =
 	| "localClineRulesToggles"
