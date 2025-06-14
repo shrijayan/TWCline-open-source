@@ -71,6 +71,7 @@ export type GlobalStateKey =
 	| "terminalReuseEnabled"
 	| "defaultTerminalProfile"
 	| "isNewUser"
+	| "terminalOutputLineLimit"
 	| "mcpRichDisplayEnabled"
 
 export type LocalStateKey =

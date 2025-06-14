@@ -239,6 +239,7 @@ export async function getAllExtensionState(context: vscode.ExtensionContext) {
 		mcpResponsesCollapsedRaw,
 		globalWorkflowToggles,
 		terminalReuseEnabled,
+		terminalOutputLineLimit,
 		defaultTerminalProfile,
 	] = await Promise.all([
 		getGlobalState(context, "isNewUser") as Promise<boolean | undefined>,
@@ -307,6 +308,7 @@ export async function getAllExtensionState(context: vscode.ExtensionContext) {
 		getGlobalState(context, "mcpResponsesCollapsed") as Promise<boolean | undefined>,
 		getGlobalState(context, "globalWorkflowToggles") as Promise<ClineRulesToggles | undefined>,
 		getGlobalState(context, "terminalReuseEnabled") as Promise<boolean | undefined>,
+		getGlobalState(context, "terminalOutputLineLimit") as Promise<number | undefined>,
 		getGlobalState(context, "defaultTerminalProfile") as Promise<string | undefined>,
 	])
 
@@ -505,6 +507,7 @@ export async function getAllExtensionState(context: vscode.ExtensionContext) {
 		enableCheckpointsSetting: enableCheckpointsSetting,
 		shellIntegrationTimeout: shellIntegrationTimeout || 4000,
 		terminalReuseEnabled: terminalReuseEnabled ?? true,
+		terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
 		defaultTerminalProfile: defaultTerminalProfile ?? "default",
 		globalWorkflowToggles: globalWorkflowToggles || {},
 		fileEditStatistics: fileEditStatistics || { totalSuggestions: 0, acceptedSuggestions: 0 },

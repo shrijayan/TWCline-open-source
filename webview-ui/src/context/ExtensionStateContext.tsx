@@ -66,6 +66,7 @@ interface ExtensionStateContextType extends ExtensionState {
 	setMcpResponsesCollapsed: (value: boolean) => void
 	setShellIntegrationTimeout: (value: number) => void
 	setTerminalReuseEnabled: (value: boolean) => void
+	setTerminalOutputLineLimit: (value: number) => void
 	setDefaultTerminalProfile: (value: string) => void
 	setChatSettings: (value: ChatSettings) => void
 	setMcpServers: (value: McpServer[]) => void
@@ -196,6 +197,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		globalWorkflowToggles: {},
 		shellIntegrationTimeout: 4000,
 		terminalReuseEnabled: true,
+		terminalOutputLineLimit: 500,
 		defaultTerminalProfile: "default",
 		isNewUser: false,
 		mcpResponsesCollapsed: false, // Default value (expanded), will be overwritten by extension state
@@ -797,6 +799,11 @@ export const ExtensionStateContextProvider: React.FC<{
 			setState((prevState) => ({
 				...prevState,
 				terminalReuseEnabled: value,
+			})),
+		setTerminalOutputLineLimit: (value) =>
+			setState((prevState) => ({
+				...prevState,
+				terminalOutputLineLimit: value,
 			})),
 		setDefaultTerminalProfile: (value) =>
 			setState((prevState) => ({

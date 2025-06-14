@@ -205,6 +205,7 @@ export class Task {
 		chatSettings: ChatSettings,
 		shellIntegrationTimeout: number,
 		terminalReuseEnabled: boolean,
+		terminalOutputLineLimit: number,
 		defaultTerminalProfile: string,
 		enableCheckpointsSetting: boolean,
 		task?: string,
@@ -230,6 +231,7 @@ export class Task {
 		this.terminalManager = new TerminalManager()
 		this.terminalManager.setShellIntegrationTimeout(shellIntegrationTimeout)
 		this.terminalManager.setTerminalReuseEnabled(terminalReuseEnabled ?? true)
+		this.terminalManager.setTerminalOutputLineLimit(terminalOutputLineLimit)
 		this.terminalManager.setDefaultTerminalProfile(defaultTerminalProfile)
 		this.urlContentFetcher = new UrlContentFetcher(context)
 		this.browserSession = new BrowserSession(context, browserSettings)
@@ -1497,9 +1499,9 @@ export class Task {
 			chunkTimer = setTimeout(async () => await flushBuffer(), CHUNK_DEBOUNCE_MS)
 		}
 
-		let result = ""
+		const outputLines: string[] = []
 		process.on("line", async (line) => {
-			result += line + "\n"
+			outputLines.push(line)
 
 			if (!didContinue) {
 				outputBuffer.push(line)
@@ -1541,7 +1543,7 @@ export class Task {
 		// grouping command_output messages despite any gaps anyways)
 		await setTimeoutPromise(50)
 
-		result = result.trim()
+		let result = this.terminalManager.processOutput(outputLines)
 
 		if (userFeedback) {
 			await this.say("user_feedback", userFeedback.text, userFeedback.images, userFeedback.files)
