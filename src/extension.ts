@@ -56,7 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.plusButtonClicked", async (webview: any) => {
+		vscode.commands.registerCommand("twcline.plusButtonClicked", async (webview: any) => {
 			const openChat = async (instance?: WebviewProvider) => {
 				await instance?.controller.clearTask()
 				await instance?.controller.postStateToWebview()
@@ -75,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.mcpButtonClicked", (webview: any) => {
+		vscode.commands.registerCommand("twcline.mcpButtonClicked", (webview: any) => {
 			const openMcp = (instance?: WebviewProvider) =>
 				instance?.controller.postMessageToWebview({
 					type: "action",
@@ -123,11 +123,11 @@ export function activate(context: vscode.ExtensionContext) {
 		await vscode.commands.executeCommand("workbench.action.lockEditorGroup")
 	}
 
-	context.subscriptions.push(vscode.commands.registerCommand("cline.popoutButtonClicked", openClineInNewTab))
-	context.subscriptions.push(vscode.commands.registerCommand("cline.openInNewTab", openClineInNewTab))
+	context.subscriptions.push(vscode.commands.registerCommand("twcline.popoutButtonClicked", openClineInNewTab))
+	context.subscriptions.push(vscode.commands.registerCommand("twcline.openInNewTab", openClineInNewTab))
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.settingsButtonClicked", (webview: any) => {
+		vscode.commands.registerCommand("twcline.settingsButtonClicked", (webview: any) => {
 			WebviewProvider.getAllInstances().forEach((instance) => {
 				const openSettings = async (instance?: WebviewProvider) => {
 					instance?.controller.postMessageToWebview({
@@ -146,7 +146,7 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.historyButtonClicked", (webview: any) => {
+		vscode.commands.registerCommand("twcline.historyButtonClicked", (webview: any) => {
 			WebviewProvider.getAllInstances().forEach((instance) => {
 				const openHistory = async (instance?: WebviewProvider) => {
 					instance?.controller.postMessageToWebview({
@@ -165,7 +165,7 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.accountButtonClicked", (webview: any) => {
+		vscode.commands.registerCommand("twcline.accountButtonClicked", (webview: any) => {
 			WebviewProvider.getAllInstances().forEach((instance) => {
 				const openAccount = async (instance?: WebviewProvider) => {
 					instance?.controller.postMessageToWebview({
@@ -262,7 +262,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.addToChat", async (range?: vscode.Range, diagnostics?: vscode.Diagnostic[]) => {
+		vscode.commands.registerCommand("twcline.addToChat", async (range?: vscode.Range, diagnostics?: vscode.Diagnostic[]) => {
 			const editor = vscode.window.activeTextEditor
 			if (!editor) {
 				return
@@ -292,7 +292,7 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.addTerminalOutputToChat", async () => {
+		vscode.commands.registerCommand("twcline.addTerminalOutputToChat", async () => {
 			const terminal = vscode.window.activeTerminal
 			if (!terminal) {
 				return
@@ -362,17 +362,17 @@ export function activate(context: vscode.ExtensionContext) {
 						document.lineAt(Math.min(document.lineCount - 1, range.end.line + 3)).text.length,
 					)
 
-					const addAction = new vscode.CodeAction("Add to Cline", vscode.CodeActionKind.QuickFix)
+					const addAction = new vscode.CodeAction("Add to TWCline", vscode.CodeActionKind.QuickFix)
 					addAction.command = {
-						command: "cline.addToChat",
-						title: "Add to Cline",
+						command: "twcline.addToChat",
+						title: "Add to TWCline",
 						arguments: [expandedRange, context.diagnostics],
 					}
 
-					const fixAction = new vscode.CodeAction("Fix with Cline", vscode.CodeActionKind.QuickFix)
+					const fixAction = new vscode.CodeAction("Fix with TWCline", vscode.CodeActionKind.QuickFix)
 					fixAction.command = {
-						command: "cline.fixWithCline",
-						title: "Fix with Cline",
+						command: "twcline.fixWithCline",
+						title: "Fix with TWCline",
 						arguments: [expandedRange, context.diagnostics],
 					}
 
@@ -392,9 +392,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register the command handler
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.fixWithCline", async (range: vscode.Range, diagnostics: vscode.Diagnostic[]) => {
+		vscode.commands.registerCommand("twcline.fixWithCline", async (range: vscode.Range, diagnostics: vscode.Diagnostic[]) => {
 			// Add this line to focus the chat input first
-			await vscode.commands.executeCommand("cline.focusChatInput")
+			await vscode.commands.executeCommand("twcline.focusChatInput")
 			// Wait for a webview instance to become visible after focusing
 			await pWaitFor(() => !!WebviewProvider.getVisibleInstance())
 			const editor = vscode.window.activeTextEditor
@@ -414,10 +414,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register the focusChatInput command handler
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.focusChatInput", () => {
+		vscode.commands.registerCommand("twcline.focusChatInput", () => {
 			let visibleWebview = WebviewProvider.getVisibleInstance()
 			if (!visibleWebview) {
-				vscode.commands.executeCommand("claude-dev.SidebarProvider.focus")
+				vscode.commands.executeCommand("twcline.SidebarProvider.focus")
 				visibleWebview = WebviewProvider.getSidebarInstance()
 				// showing the extension will call didBecomeVisible which focuses it already
 				// but it doesn't focus if a tab is selected which focusChatInput accounts for
@@ -432,7 +432,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register the generateGitCommitMessage command handler
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.generateGitCommitMessage", async () => {
+		vscode.commands.registerCommand("twcline.generateGitCommitMessage", async () => {
 			// Get the controller from any instance, without activating the view
 			const controller = WebviewProvider.getAllInstances()[0]?.controller
 

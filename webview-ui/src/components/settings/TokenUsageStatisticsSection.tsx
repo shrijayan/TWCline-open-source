@@ -29,36 +29,39 @@ const TokenUsageStatisticsSection = () => {
 		}
 	}, [])
 
-	const handleMessage = useCallback((event: MessageEvent) => {
-		const message: ExtensionMessage = event.data
-		switch (message.type) {
-			case "tokenUsageStatistics":
-				setStatistics(message.tokenUsageStatistics)
-				setIsLoading(false)
-				break
-			case "exportedTokenUsageStatistics":
-				setIsExporting(false)
-				if (message.exportData) {
-					const blob = new Blob([message.exportData], { type: "application/json" })
-					const url = URL.createObjectURL(blob)
-					const a = document.createElement("a")
-					a.href = url
-					a.download = `cline-token-usage-statistics-${new Date().toISOString().split("T")[0]}.json`
-					document.body.appendChild(a)
-					a.click()
-					document.body.removeChild(a)
-					URL.revokeObjectURL(url)
-				}
-				break
-			case "tokenUsageStatisticsReset":
-				setIsResetting(false)
-				if (message.success) {
-					setStatistics(null)
-					fetchStatistics()
-				}
-				break
-		}
-	}, [fetchStatistics])
+	const handleMessage = useCallback(
+		(event: MessageEvent) => {
+			const message: ExtensionMessage = event.data
+			switch (message.type) {
+				case "tokenUsageStatistics":
+					setStatistics(message.tokenUsageStatistics)
+					setIsLoading(false)
+					break
+				case "exportedTokenUsageStatistics":
+					setIsExporting(false)
+					if (message.exportData) {
+						const blob = new Blob([message.exportData], { type: "application/json" })
+						const url = URL.createObjectURL(blob)
+						const a = document.createElement("a")
+						a.href = url
+						a.download = `cline-token-usage-statistics-${new Date().toISOString().split("T")[0]}.json`
+						document.body.appendChild(a)
+						a.click()
+						document.body.removeChild(a)
+						URL.revokeObjectURL(url)
+					}
+					break
+				case "tokenUsageStatisticsReset":
+					setIsResetting(false)
+					if (message.success) {
+						setStatistics(null)
+						fetchStatistics()
+					}
+					break
+			}
+		},
+		[fetchStatistics],
+	)
 
 	useEvent("message", handleMessage)
 
@@ -97,7 +100,7 @@ const TokenUsageStatisticsSection = () => {
 	return (
 		<div className="mb-[20px]">
 			<div className="mb-[10px] font-medium">Token Usage Statistics</div>
-			
+
 			{statistics ? (
 				<div className="border border-solid border-[var(--vscode-panel-border)] rounded-md p-[15px] bg-[var(--vscode-panel-background)]">
 					{/* Overview Section */}
@@ -138,13 +141,17 @@ const TokenUsageStatisticsSection = () => {
 							<div className="text-sm">
 								<div className="mb-1">
 									<span className="font-medium">{statistics.mostUsedModel.modelId}</span>
-									<span className="ml-2 text-[var(--vscode-descriptionForeground)]">({statistics.mostUsedModel.provider})</span>
+									<span className="ml-2 text-[var(--vscode-descriptionForeground)]">
+										({statistics.mostUsedModel.provider})
+									</span>
 								</div>
 								<div className="text-[var(--vscode-descriptionForeground)]">
-									{statistics.mostUsedModel.usageCount} requests ({statistics.mostUsedModel.percentageOfTotalUsage.toFixed(1)}%)
+									{statistics.mostUsedModel.usageCount} requests (
+									{statistics.mostUsedModel.percentageOfTotalUsage.toFixed(1)}%)
 								</div>
 								<div className="text-[var(--vscode-descriptionForeground)]">
-									{formatNumber(statistics.mostUsedModel.totalTokens)} tokens, {formatCurrency(statistics.mostUsedModel.totalCost)}
+									{formatNumber(statistics.mostUsedModel.totalTokens)} tokens,{" "}
+									{formatCurrency(statistics.mostUsedModel.totalCost)}
 								</div>
 							</div>
 						</div>
@@ -156,15 +163,22 @@ const TokenUsageStatisticsSection = () => {
 						<div className="text-sm">
 							<div className="mb-1">
 								<span className="text-[var(--vscode-descriptionForeground)]">Hit Ratio:</span>
-								<span className="ml-2 font-medium">{(statistics.cacheMetrics.cacheHitRatio * 100).toFixed(1)}%</span>
+								<span className="ml-2 font-medium">
+									{(statistics.cacheMetrics.cacheHitRatio * 100).toFixed(1)}%
+								</span>
 							</div>
 							<div className="mb-1">
 								<span className="text-[var(--vscode-descriptionForeground)]">Cost Saved:</span>
-								<span className="ml-2 font-medium">{formatCurrency(statistics.cacheMetrics.costSavedFromCache)}</span>
+								<span className="ml-2 font-medium">
+									{formatCurrency(statistics.cacheMetrics.costSavedFromCache)}
+								</span>
 							</div>
 							<div>
 								<span className="text-[var(--vscode-descriptionForeground)]">Cache Operations:</span>
-								<span className="ml-2">{statistics.cacheMetrics.totalCacheHits} hits, {statistics.cacheMetrics.totalCacheMisses} misses</span>
+								<span className="ml-2">
+									{statistics.cacheMetrics.totalCacheHits} hits, {statistics.cacheMetrics.totalCacheMisses}{" "}
+									misses
+								</span>
 							</div>
 						</div>
 					</div>
@@ -179,9 +193,12 @@ const TokenUsageStatisticsSection = () => {
 									.slice(0, 10)
 									.map(([key, model]) => (
 										<div key={key} className="mb-2 p-2 bg-[var(--vscode-input-background)] rounded text-xs">
-											<div className="font-medium">{model.modelId} ({model.provider})</div>
+											<div className="font-medium">
+												{model.modelId} ({model.provider})
+											</div>
 											<div className="text-[var(--vscode-descriptionForeground)] mt-1">
-												{model.usageCount} requests • {formatNumber(model.totalTokens)} tokens • {formatCurrency(model.totalCost)}
+												{model.usageCount} requests • {formatNumber(model.totalTokens)} tokens •{" "}
+												{formatCurrency(model.totalCost)}
 											</div>
 											<div className="text-[var(--vscode-descriptionForeground)]">
 												Avg: {formatCurrency(model.averageCostPerRequest)} per request
@@ -207,8 +224,8 @@ const TokenUsageStatisticsSection = () => {
 						<VSCodeButton onClick={exportStatistics} disabled={isExporting}>
 							{isExporting ? "Exporting..." : "Export JSON"}
 						</VSCodeButton>
-						<VSCodeButton 
-							onClick={resetStatistics} 
+						<VSCodeButton
+							onClick={resetStatistics}
 							disabled={isResetting}
 							style={{ backgroundColor: "var(--vscode-errorForeground)", color: "white" }}>
 							{isResetting ? "Resetting..." : "Reset All"}
@@ -227,7 +244,8 @@ const TokenUsageStatisticsSection = () => {
 			)}
 
 			<p className="text-xs mt-[8px] text-[var(--vscode-descriptionForeground)]">
-				Track your token usage and costs across different models and providers. Statistics are stored locally and never shared.
+				Track your token usage and costs across different models and providers. Statistics are stored locally and never
+				shared.
 			</p>
 		</div>
 	)

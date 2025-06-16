@@ -9,8 +9,8 @@ import { TabButton } from "../mcp/configuration/McpConfigurationView"
 import { useEvent } from "react-use"
 import { ExtensionMessage } from "@shared/ExtensionMessage"
 import BrowserSettingsSection from "./BrowserSettingsSection"
-import TokenUsageStatisticsSection from "./TokenUsageStatisticsSection"
 import TerminalSettingsSection from "./TerminalSettingsSection"
+import { StatisticsView } from "../account/StatisticsView"
 import { FEATURE_FLAGS } from "@shared/services/feature-flags/feature-flags"
 const { IS_DEV } = process.env
 
@@ -34,6 +34,7 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 	const [apiErrorMessage, setApiErrorMessage] = useState<string | undefined>(undefined)
 	const [modelIdErrorMessage, setModelIdErrorMessage] = useState<string | undefined>(undefined)
 	const [pendingTabChange, setPendingTabChange] = useState<"plan" | "act" | null>(null)
+	const [showStatistics, setShowStatistics] = useState(false)
 
 	const handleSubmit = (withoutDone: boolean = false) => {
 		const apiValidationResult = validateApiConfiguration(apiConfiguration)
@@ -146,6 +147,10 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 		handleSubmit(true)
 	}
 
+	if (showStatistics) {
+		return <StatisticsView onBack={() => setShowStatistics(false)} />
+	}
+
 	return (
 		<div className="fixed top-0 left-0 right-0 bottom-0 pt-[10px] pr-0 pb-0 pl-5 flex flex-col overflow-hidden">
 			<div className="flex justify-between items-center mb-[13px] pr-[17px]">
@@ -245,8 +250,20 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 				{/* Terminal Settings Section */}
 				<TerminalSettingsSection />
 
-				{/* Token Usage Statistics Section */}
-				<TokenUsageStatisticsSection />
+				{/* Statistics Section */}
+				<div className="mb-[20px]">
+					<div className="mb-[10px] font-medium">Statistics</div>
+					<div className="border border-solid border-[var(--vscode-panel-border)] rounded-md p-[15px] bg-[var(--vscode-panel-background)]">
+						<p className="text-sm text-[var(--vscode-descriptionForeground)] mb-[10px]">
+							View comprehensive usage statistics including token usage, file edit suggestions, prompt quality, and
+							code commit tracking.
+						</p>
+						<VSCodeButton onClick={() => setShowStatistics(true)} className="w-full">
+							<span className="codicon codicon-graph-line mr-2"></span>
+							View Statistics
+						</VSCodeButton>
+					</div>
+				</div>
 
 				<div className="mt-auto pr-2 flex justify-center">
 					<SettingsButton

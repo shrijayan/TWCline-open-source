@@ -26,12 +26,7 @@ export class StatisticsService {
 		return StatisticsService.instance
 	}
 
-	async recordTokenUsage(
-		usage: ApiStreamUsageChunk,
-		modelId: string,
-		provider: string,
-		taskId: string,
-	): Promise<void> {
+	async recordTokenUsage(usage: ApiStreamUsageChunk, modelId: string, provider: string, taskId: string): Promise<void> {
 		const timestamp = Date.now()
 		const statistics = await this.getTokenUsageStatistics()
 
@@ -179,7 +174,8 @@ export class StatisticsService {
 					usageCount: modelStats.usageCount,
 					totalTokens: modelStats.totalTokens,
 					totalCost: modelStats.totalCost,
-					percentageOfTotalUsage: statistics.totalRequests > 0 ? (modelStats.usageCount / statistics.totalRequests) * 100 : 0,
+					percentageOfTotalUsage:
+						statistics.totalRequests > 0 ? (modelStats.usageCount / statistics.totalRequests) * 100 : 0,
 				}
 			}
 		}
@@ -199,7 +195,7 @@ export class StatisticsService {
 
 	async getModelStatistics(modelId: string, provider?: string): Promise<ModelUsageStats | undefined> {
 		const statistics = await this.getTokenUsageStatistics()
-		
+
 		if (provider) {
 			const modelKey = `${provider}:${modelId}`
 			return statistics.modelUsageBreakdown[modelKey]
@@ -226,7 +222,7 @@ export class StatisticsService {
 
 	async exportStatistics(): Promise<string> {
 		const storage = (await getGlobalState(this.context, "tokenUsageStatistics")) as StatisticsStorage | undefined
-		
+
 		if (!storage) {
 			return JSON.stringify({ message: "No statistics available" }, null, 2)
 		}

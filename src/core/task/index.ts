@@ -3951,7 +3951,7 @@ export class Task {
 			}
 
 			updateApiReqMsg()
-			
+
 			// Record token usage statistics
 			try {
 				const controllerRef = this.controllerRef.deref()
@@ -3963,19 +3963,21 @@ export class Task {
 						outputTokens,
 						cacheWriteTokens,
 						cacheReadTokens,
-						totalCost: totalCost ?? calculateApiCostAnthropic(
-							this.api.getModel().info,
-							inputTokens,
-							outputTokens,
-							cacheWriteTokens,
-							cacheReadTokens,
-						),
+						totalCost:
+							totalCost ??
+							calculateApiCostAnthropic(
+								this.api.getModel().info,
+								inputTokens,
+								outputTokens,
+								cacheWriteTokens,
+								cacheReadTokens,
+							),
 					})
 				}
 			} catch (error) {
-				console.error('Error recording token usage statistics:', error)
+				console.error("Error recording token usage statistics:", error)
 			}
-			
+
 			await this.saveClineMessagesAndUpdateHistory()
 			await this.postStateToWebview()
 

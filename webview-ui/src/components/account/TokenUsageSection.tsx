@@ -35,11 +35,11 @@ export const TokenUsageSection: React.FC = () => {
 	}
 
 	const formatCurrency = (amount: number): string => {
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: 'USD',
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: "USD",
 			minimumFractionDigits: 4,
-			maximumFractionDigits: 4
+			maximumFractionDigits: 4,
 		}).format(amount)
 	}
 
@@ -75,7 +75,7 @@ export const TokenUsageSection: React.FC = () => {
 		<div className="border border-[var(--vscode-editorWidget-border)] rounded-md p-4 bg-[var(--vscode-editor-background)] mb-4">
 			<div>
 				<h3 className="text-md font-medium mb-4">Token Usage & Cost</h3>
-				
+
 				{/* Overview Stats */}
 				<div className="grid grid-cols-2 gap-4 mb-4">
 					<div className="border-r border-[var(--vscode-editorWidget-border)] pr-4">
@@ -88,7 +88,7 @@ export const TokenUsageSection: React.FC = () => {
 					<div>
 						<div className="text-sm text-[var(--vscode-descriptionForeground)]">Total Cost</div>
 						<div className="text-2xl font-semibold mt-1">{formatCurrency(statistics.totalCost)}</div>
-						{(statistics.totalCacheReadTokens + statistics.totalCacheWriteTokens) > 0 && (
+						{statistics.totalCacheReadTokens + statistics.totalCacheWriteTokens > 0 && (
 							<div className="text-xs text-[var(--vscode-descriptionForeground)] mt-1">
 								{formatNumber(statistics.totalCacheReadTokens + statistics.totalCacheWriteTokens)} cached tokens
 							</div>
@@ -108,7 +108,7 @@ export const TokenUsageSection: React.FC = () => {
 				)}
 
 				{/* Cache Efficiency */}
-				{(statistics.cacheMetrics.totalCacheHits + statistics.cacheMetrics.totalCacheMisses) > 0 && (
+				{statistics.cacheMetrics.totalCacheHits + statistics.cacheMetrics.totalCacheMisses > 0 && (
 					<div className="mb-4">
 						<div className="text-sm text-[var(--vscode-descriptionForeground)] mb-2">Cache Efficiency</div>
 						<div className="grid grid-cols-2 gap-4">
@@ -117,7 +117,9 @@ export const TokenUsageSection: React.FC = () => {
 								<div className="text-xs text-[var(--vscode-descriptionForeground)]">Hit Ratio</div>
 							</div>
 							<div>
-								<div className="text-lg font-medium">{formatCurrency(statistics.cacheMetrics.costSavedFromCache)}</div>
+								<div className="text-lg font-medium">
+									{formatCurrency(statistics.cacheMetrics.costSavedFromCache)}
+								</div>
 								<div className="text-xs text-[var(--vscode-descriptionForeground)]">Cost Savings</div>
 							</div>
 						</div>
@@ -130,13 +132,14 @@ export const TokenUsageSection: React.FC = () => {
 						<div className="text-sm text-[var(--vscode-descriptionForeground)] mb-2">Top Providers</div>
 						<div className="space-y-2">
 							{Object.entries(statistics.providerUsageBreakdown)
-								.sort(([,a], [,b]) => (b as any).totalCost - (a as any).totalCost)
+								.sort(([, a], [, b]) => (b as any).totalCost - (a as any).totalCost)
 								.slice(0, 3)
 								.map(([provider, stats]) => (
 									<div key={provider} className="flex justify-between items-center text-sm">
 										<span className="font-medium">{provider}</span>
 										<span className="text-[var(--vscode-descriptionForeground)]">
-											{formatCurrency((stats as any).totalCost)} • {formatNumber((stats as any).totalTokens)} tokens
+											{formatCurrency((stats as any).totalCost)} •{" "}
+											{formatNumber((stats as any).totalTokens)} tokens
 										</span>
 									</div>
 								))}
@@ -146,11 +149,7 @@ export const TokenUsageSection: React.FC = () => {
 
 				{/* Action Buttons */}
 				<div className="flex gap-2 mt-4">
-					<VSCodeButton 
-						appearance="secondary" 
-						onClick={fetchStatistics}
-						disabled={isLoading}
-					>
+					<VSCodeButton appearance="secondary" onClick={fetchStatistics} disabled={isLoading}>
 						Refresh
 					</VSCodeButton>
 				</div>

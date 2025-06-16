@@ -9,19 +9,19 @@ import { Controller } from "./controller"
 export function registerCommands(context: vscode.ExtensionContext, controller: Controller): void {
 	// Register file edit statistics command
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.fileEditPresented", async () => {
+		vscode.commands.registerCommand("twcline.fileEditPresented", async () => {
 			await controller.recordFileEditPresented()
 		}),
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.fileEditAccepted", async () => {
+		vscode.commands.registerCommand("twcline.fileEditAccepted", async () => {
 			await controller.incrementAcceptedFileEdits()
 		}),
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.fileEditRejected", async () => {
+		vscode.commands.registerCommand("twcline.fileEditRejected", async () => {
 			await controller.recordFileEditRejected()
 		}),
 	)
