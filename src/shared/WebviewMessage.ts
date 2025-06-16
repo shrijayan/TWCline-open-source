@@ -70,6 +70,10 @@ export interface WebviewMessage {
 		| "fetchFileEditStatistics"
 		| "fileEditAccepted"
 		| "fileEditRejected"
+		| "fetchTokenUsageStatistics"
+		| "exportTokenUsageStatistics"
+		| "resetTokenUsageStatistics"
+		| "getModelStatistics"
 
 	// | "relaunchChromeDebugMode"
 	text?: string

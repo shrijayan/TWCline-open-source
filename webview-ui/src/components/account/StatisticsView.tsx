@@ -1,8 +1,11 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { vscode } from "@/utils/vscode"
 import { VSCodeButton, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
-import { FileEditStatistics } from "@shared/Statistics"
+import { FileEditStatistics, TokenUsageStatistics } from "@shared/Statistics"
+import { useEvent } from "react-use"
+import { ExtensionMessage } from "@shared/ExtensionMessage"
+import TokenUsageSection from "./TokenUsageSection"
 
 interface StatisticsViewProps {
 	onBack: () => void
@@ -13,6 +16,8 @@ interface StatisticsViewProps {
  */
 export const StatisticsView: React.FC<StatisticsViewProps> = ({ onBack }) => {
 	const { fileEditStatistics } = useExtensionState()
+	const [tokenStatistics, setTokenStatistics] = useState<TokenUsageStatistics | null>(null)
+	const [isLoadingTokenStats, setIsLoadingTokenStats] = useState(false)
 
 	useEffect(() => {
 		// Fetch file edit statistics when component mounts
@@ -60,7 +65,8 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onBack }) => {
 				<h3 className="text-[var(--vscode-foreground)] m-0">Statistics</h3>
 				<VSCodeButton onClick={onBack}>Back</VSCodeButton>
 			</div>
-			<div className="flex-grow overflow-hidden pr-[8px] flex flex-col">
+			<div className="flex-grow overflow-y-auto pr-[8px] flex flex-col">
+				<TokenUsageSection />
 				<div className="border border-[var(--vscode-editorWidget-border)] rounded-md p-4 bg-[var(--vscode-editor-background)] mb-4">
 					<div className="mb-4">
 						<h3 className="text-md font-medium mb-2">File Edit Suggestions</h3>

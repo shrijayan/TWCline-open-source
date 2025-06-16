@@ -31,7 +31,8 @@ import { ChatSettings } from "@shared/ChatSettings"
 import { ExtensionMessage, ExtensionState, Invoke, Platform } from "@shared/ExtensionMessage"
 import { HistoryItem } from "@shared/HistoryItem"
 import { McpDownloadResponse, McpMarketplaceCatalog, McpServer } from "@shared/mcp"
-import { FileEditStatistics } from "@shared/Statistics"
+import { FileEditStatistics, TokenUsageStatistics } from "@shared/Statistics"
+import { StatisticsService } from "@services/statistics/StatisticsService"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
 import { WebviewMessage } from "@shared/WebviewMessage"
 import { fileExistsAtPath } from "@utils/fs"
@@ -72,6 +73,7 @@ export class Controller {
 	mcpHub: McpHub
 	accountService: ClineAccountService
 	gitCommitChecker: GitCommitChecker
+	statisticsService: StatisticsService
 	private latestAnnouncementId = "may-09-2025_17:11:00" // update to some unique identifier when we add a new announcement
 
 	constructor(
@@ -100,6 +102,9 @@ export class Controller {
 		// Initialize GitCommitChecker
 		this.gitCommitChecker = new GitCommitChecker(this.context)
 		this.gitCommitChecker.startPeriodicChecks(true) // Run immediate check on startup
+
+		// Initialize StatisticsService
+		this.statisticsService = StatisticsService.getInstance(this.context)
 
 		// Register command for recording lines written
 		this.disposables.push(
@@ -767,6 +772,24 @@ export class Controller {
 			}
 			case "fetchFileEditStatistics": {
 				await this.fetchFileEditStatistics()
+				break
+			}
+			case "fetchTokenUsageStatistics": {
+				await this.fetchTokenUsageStatistics()
+				break
+			}
+			case "exportTokenUsageStatistics": {
+				await this.exportTokenUsageStatistics()
+				break
+			}
+			case "resetTokenUsageStatistics": {
+				await this.resetTokenUsageStatistics()
+				break
+			}
+			case "getModelStatistics": {
+				if (message.modelId) {
+					await this.getModelStatistics(message.modelId, message.text)
+				}
 				break
 			}
 			// Add more switch case statements here as more webview message commands
@@ -1959,6 +1982,88 @@ Commit message:`
 
 		console.log("Sent file edit statistics to webview")
 		return stats
+	}
+
+	// Token Usage Statistics
+
+	async fetchTokenUsageStatistics() {
+		console.log("Fetching token usage statistics...")
+		const statistics = await this.statisticsService.getTokenUsageStatistics()
+		console.log("Retrieved token usage statistics:", statistics)
+
+		await this.postMessageToWebview({
+			type: "tokenUsageStatistics",
+			tokenUsageStatistics: statistics,
+		})
+
+		console.log("Sent token usage statistics to webview")
+		return statistics
+	}
+
+	async exportTokenUsageStatistics() {
+		console.log("Exporting token usage statistics...")
+		try {
+			const exportData = await this.statisticsService.exportStatistics()
+
+			await this.postMessageToWebview({
+				type: "exportedTokenUsageStatistics",
+				exportData,
+			})
+
+			console.log("Token usage statistics exported successfully")
+		} catch (error) {
+			console.error("Error exporting token usage statistics:", error)
+			await this.postMessageToWebview({
+				type: "exportedTokenUsageStatistics",
+				error: "Failed to export statistics",
+			})
+		}
+	}
+
+	async resetTokenUsageStatistics() {
+		console.log("Resetting token usage statistics...")
+		try {
+			await this.statisticsService.resetStatistics()
+
+			await this.postMessageToWebview({
+				type: "tokenUsageStatisticsReset",
+				success: true,
+			})
+
+			console.log("Token usage statistics reset successfully")
+			vscode.window.showInformationMessage("Token usage statistics have been reset")
+		} catch (error) {
+			console.error("Error resetting token usage statistics:", error)
+			await this.postMessageToWebview({
+				type: "tokenUsageStatisticsReset",
+				error: "Failed to reset statistics",
+			})
+			vscode.window.showErrorMessage("Failed to reset token usage statistics")
+		}
+	}
+
+	async getModelStatistics(modelId: string, provider?: string) {
+		console.log(`Getting statistics for model: ${modelId}, provider: ${provider}`)
+		try {
+			const modelStats = await this.statisticsService.getModelStatistics(modelId, provider)
+
+			await this.postMessageToWebview({
+				type: "modelStatistics",
+				modelId,
+				provider,
+				modelStatistics: modelStats,
+			})
+
+			console.log("Model statistics retrieved:", modelStats)
+		} catch (error) {
+			console.error("Error getting model statistics:", error)
+			await this.postMessageToWebview({
+				type: "modelStatistics",
+				modelId,
+				provider,
+				error: "Failed to get model statistics",
+			})
+		}
 	}
 
 	/**

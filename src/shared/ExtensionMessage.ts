@@ -47,6 +47,10 @@ export interface ExtensionMessage {
 		| "setActiveQuote"
 		| "sendWithCustomPrompt" // New type for sending with custom prompt
 		| "fileEditStatistics"
+		| "tokenUsageStatistics"
+		| "exportedTokenUsageStatistics"
+		| "tokenUsageStatisticsReset"
+		| "modelStatistics"
 	text?: string
 	action?:
 		| "chatButtonClicked"
@@ -112,6 +116,11 @@ export interface ExtensionMessage {
 		totalSuggestions: number
 		acceptedSuggestions: number
 	}
+	tokenUsageStatistics?: any
+	exportData?: string
+	modelId?: string
+	provider?: string
+	modelStatistics?: any
 }
 
 export type Invoke = "sendMessage" | "primaryButtonClick" | "secondaryButtonClick"

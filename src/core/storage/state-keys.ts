@@ -83,5 +83,6 @@ export type GlobalStateKey =
 	| "shellIntegrationTimeout"
 	| "fileEditStatistics"
 	| "lineTracker"
+	| "tokenUsageStatistics"
 
 export type LocalStateKey = "localClineRulesToggles"

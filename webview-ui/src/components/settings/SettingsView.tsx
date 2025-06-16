@@ -9,6 +9,7 @@ import { TabButton } from "../mcp/configuration/McpConfigurationView"
 import { useEvent } from "react-use"
 import { ExtensionMessage } from "@shared/ExtensionMessage"
 import BrowserSettingsSection from "./BrowserSettingsSection"
+import TokenUsageStatisticsSection from "./TokenUsageStatisticsSection"
 import TerminalSettingsSection from "./TerminalSettingsSection"
 import { FEATURE_FLAGS } from "@shared/services/feature-flags/feature-flags"
 const { IS_DEV } = process.env
@@ -243,6 +244,9 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 
 				{/* Terminal Settings Section */}
 				<TerminalSettingsSection />
+
+				{/* Token Usage Statistics Section */}
+				<TokenUsageStatisticsSection />
 
 				<div className="mt-auto pr-2 flex justify-center">
 					<SettingsButton

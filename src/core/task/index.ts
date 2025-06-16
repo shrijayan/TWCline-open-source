@@ -26,6 +26,7 @@ import { UrlContentFetcher } from "@services/browser/UrlContentFetcher"
 import { listFiles } from "@services/glob/list-files"
 import { regexSearchFiles } from "@services/ripgrep"
 import { telemetryService } from "@/services/posthog/telemetry/TelemetryService"
+
 import { parseSourceCodeForDefinitionsTopLevel } from "@services/tree-sitter"
 import { ApiConfiguration } from "@shared/api"
 import { findLast, findLastIndex, parsePartialArrayString } from "@shared/array"
@@ -99,6 +100,7 @@ import { parseSlashCommands } from "@core/slash-commands"
 import WorkspaceTracker from "@integrations/workspace/WorkspaceTracker"
 import { McpHub } from "@services/mcp/McpHub"
 import { isInTestMode } from "../../services/test/TestMode"
+import { StatisticsService } from "@services/statistics/StatisticsService"
 import { featureFlagsService } from "@/services/posthog/feature-flags/FeatureFlagsService"
 
 export const cwd =
@@ -3949,6 +3951,31 @@ export class Task {
 			}
 
 			updateApiReqMsg()
+			
+			// Record token usage statistics
+			try {
+				const controllerRef = this.controllerRef.deref()
+				if (controllerRef?.statisticsService && (inputTokens > 0 || outputTokens > 0)) {
+					await controllerRef.statisticsService.recordTokenUsage({
+						modelId: this.api.getModel().id,
+						provider: currentProviderId,
+						inputTokens,
+						outputTokens,
+						cacheWriteTokens,
+						cacheReadTokens,
+						totalCost: totalCost ?? calculateApiCostAnthropic(
+							this.api.getModel().info,
+							inputTokens,
+							outputTokens,
+							cacheWriteTokens,
+							cacheReadTokens,
+						),
+					})
+				}
+			} catch (error) {
+				console.error('Error recording token usage statistics:', error)
+			}
+			
 			await this.saveClineMessagesAndUpdateHistory()
 			await this.postStateToWebview()
 
