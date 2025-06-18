@@ -21,6 +21,7 @@ export interface WebviewMessage {
 		| "openExtensionSettings"
 		| "requestVsCodeLmModels"
 		| "authStateChanged"
+		| "webviewDidLaunch"
 		| "fetchMcpMarketplace"
 		| "searchCommits"
 		| "telemetrySetting"

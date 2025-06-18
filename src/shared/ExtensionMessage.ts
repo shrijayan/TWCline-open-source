@@ -7,6 +7,7 @@ import { BrowserSettings } from "./BrowserSettings"
 import { ChatSettings } from "./ChatSettings"
 import { HistoryItem } from "./HistoryItem"
 import { McpServer, McpMarketplaceCatalog, McpDownloadResponse, McpViewTab } from "./mcp"
+import { FileEditStatistics } from "./Statistics"
 import { TelemetrySetting } from "./TelemetrySetting"
 import type { BalanceResponse, UsageTransaction, PaymentTransaction } from "../shared/ClineAccount"
 import { ClineRulesToggles } from "./cline-rules"
@@ -18,6 +19,7 @@ export interface ExtensionMessage {
 		| "state"
 		| "selectedImages"
 		| "openAiModels"
+		| "openRouterModels"
 		| "requestyModels"
 		| "mcpDownloadDetails"
 		| "userCreditsBalance"
@@ -27,6 +29,10 @@ export interface ExtensionMessage {
 		| "setActiveQuote"
 		| "sendWithCustomPrompt" // New type for sending with custom prompt
 		| "fileEditStatistics"
+		| "theme" // For theme updates
+		| "workspaceUpdated" // For workspace file updates
+		| "mcpMarketplaceCatalog" // For MCP marketplace updates
+		| "totalTasksSize" // For task size information
 	text?: string
 	action?: "didBecomeVisible" | "accountLogoutClicked"
 	state?: ExtensionState
@@ -36,6 +42,7 @@ export interface ExtensionMessage {
 	lmStudioModels?: string[]
 	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
 	openAiModels?: string[]
+	openRouterModels?: Record<string, ModelInfo>
 	requestyModels?: Record<string, ModelInfo>
 	mcpServers?: McpServer[]
 	customToken?: string
@@ -68,10 +75,9 @@ export interface ExtensionMessage {
 		is_streaming?: boolean // Whether this is part of a streaming response
 		sequence_number?: number // For ordering chunks in streaming responses
 	}
-	fileEditStatistics?: {
-		totalSuggestions: number
-		acceptedSuggestions: number
-	}
+	fileEditStatistics?: FileEditStatistics
+	filePaths?: string[] // For workspace file paths
+	totalTasksSize?: number // For task size data
 }
 
 export type Platform = "aix" | "darwin" | "freebsd" | "linux" | "openbsd" | "sunos" | "win32" | "unknown"

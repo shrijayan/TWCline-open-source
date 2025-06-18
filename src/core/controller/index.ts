@@ -48,6 +48,8 @@ import { sendAddToInputEvent } from "./ui/subscribeToAddToInput"
 import { sendAuthCallbackEvent } from "./account/subscribeToAuthCallback"
 import { sendMcpMarketplaceCatalogEvent } from "./mcp/subscribeToMcpMarketplaceCatalog"
 import { sendRelinquishControlEvent } from "./ui/subscribeToRelinquishControl"
+import { handleModelsServiceRequest } from "./models/index"
+import { EmptyRequest } from "@shared/proto/common"
 
 /*
 https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -234,7 +236,7 @@ export class Controller {
 					}
 				})
 				this.silentlyRefreshMcpMarketplace()
-				handleModelsServiceRequest(this, "refreshOpenRouterModels", EmptyRequest.create()).then(async (response) => {
+				handleModelsServiceRequest(this, "refreshOpenRouterModels", EmptyRequest.create()).then(async (response: any) => {
 					if (response && response.models) {
 						// update model info in state (this needs to be done here since we don't want to update state while settings is open, and we may refresh models there)
 						const { apiConfiguration } = await getAllExtensionState(this.context)
@@ -315,6 +317,23 @@ export class Controller {
 				if (message.grpc_request_cancel) {
 					await handleGrpcRequestCancel(this, message.grpc_request_cancel)
 				}
+				break
+			}
+
+			case "fetchFileEditStatistics": {
+				const { fileEditStatistics } = await getAllExtensionState(this.context)
+				await this.postMessageToWebview({
+					type: "fileEditStatistics",
+					fileEditStatistics: fileEditStatistics || {
+						totalSuggestions: 0,
+						acceptedSuggestions: 0,
+						promptQuality: undefined,
+						totalLinesWritten: 0,
+						totalLinesCommitted: 0,
+						commitRatio: 0,
+						lastCheckTimestamp: undefined,
+					},
+				})
 				break
 			}
 
@@ -1273,6 +1292,34 @@ Commit message:`
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			vscode.window.showErrorMessage(`Failed to generate commit message: ${errorMessage}`)
 		}
+	}
+
+	// File edit statistics methods
+	async recordFileEditPresented() {
+		const { fileEditStatistics } = await getAllExtensionState(this.context)
+		const updatedStats = {
+			totalSuggestions: (fileEditStatistics?.totalSuggestions || 0) + 1,
+			acceptedSuggestions: fileEditStatistics?.acceptedSuggestions || 0,
+		}
+		await updateGlobalState(this.context, "fileEditStatistics", updatedStats)
+		await this.postStateToWebview()
+	}
+
+	async incrementAcceptedFileEdits() {
+		const { fileEditStatistics } = await getAllExtensionState(this.context)
+		const updatedStats = {
+			totalSuggestions: fileEditStatistics?.totalSuggestions || 0,
+			acceptedSuggestions: (fileEditStatistics?.acceptedSuggestions || 0) + 1,
+		}
+		await updateGlobalState(this.context, "fileEditStatistics", updatedStats)
+		await this.postStateToWebview()
+	}
+
+	async recordFileEditRejected() {
+		// For now, we only track rejections by not incrementing acceptedSuggestions
+		// The total suggestions are already tracked in recordFileEditPresented
+		// This method exists for potential future enhancements
+		await this.postStateToWebview()
 	}
 
 	// dev

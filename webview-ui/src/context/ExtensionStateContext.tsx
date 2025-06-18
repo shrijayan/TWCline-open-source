@@ -18,9 +18,9 @@ import { ExtensionMessage, ExtensionState, DEFAULT_PLATFORM } from "@shared/Exte
 import { FileEditStatistics } from "@shared/Statistics"
 import { DEFAULT_BROWSER_SETTINGS } from "@shared/BrowserSettings"
 import { ChatSettings, DEFAULT_CHAT_SETTINGS } from "@shared/ChatSettings"
-import { DEFAULT_PLATFORM, ExtensionMessage, ExtensionState } from "@shared/ExtensionMessage"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
 import { findLastIndex } from "@shared/array"
+import { vscode } from "../utils/vscode"
 import {
 	ApiConfiguration,
 	ModelInfo,
@@ -45,6 +45,7 @@ interface ExtensionStateContextType extends ExtensionState {
 	filePaths: string[]
 	totalTasksSize: number | null
 	availableTerminalProfiles: TerminalProfile[]
+	fileEditStatistics: FileEditStatistics
 
 	// View state
 	showMcp: boolean
@@ -723,6 +724,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		filePaths,
 		totalTasksSize,
 		availableTerminalProfiles,
+		fileEditStatistics,
 		showMcp,
 		mcpTab,
 		showSettings,

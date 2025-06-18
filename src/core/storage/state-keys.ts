@@ -40,6 +40,7 @@ export type GlobalStateKey =
 	| "openAiModelId"
 	| "openAiModelInfo"
 	| "openAiHeaders"
+	| "openRouterModelInfo"
 	| "ollamaBaseUrl"
 	| "ollamaApiOptionsCtxNum"
 	| "lmStudioModelId"
